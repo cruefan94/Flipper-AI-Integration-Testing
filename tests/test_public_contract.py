@@ -16,7 +16,7 @@ class PublicContractTests(unittest.TestCase):
 
     def test_request_reply_ids(self):
         messages={m["type"]:set(m["fields"]) for m in self.contract["messages"]}
-        for name in ("ping","status_request","status_response","ai_request","ai_response"):
+        for name in ("PING","STATUS","ASK","ANSWER"):
             self.assertIn("request_id",messages[name])
 
     def test_security_defaults(self):
