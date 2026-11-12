@@ -17,6 +17,13 @@
       "model": "flipper-local",
       "requires_api_key": false,
       "allow_http_local": true
+    },
+    "groq_free": {
+      "kind": "openai_compatible",
+      "endpoint": "https://api.groq.com/openai/v1/chat/completions",
+      "model": "openai/gpt-oss-20b",
+      "api_key_env": "FLIPPER_AI_GROQ_API_KEY",
+      "requires_api_key": true
     }
   }
 }
