@@ -1,0 +1,26 @@
+name: Public runner and contract smoke tests
+
+on:
+  push:
+    branches: [main, "ci/**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  public-smoke:
+    name: Public CI smoke and contract checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Identify public runner
+        run: |
+          echo "Public repo runner: ${RUNNER_OS}"
+          python3 --version
+      - name: Public-safe contract smoke tests
+        run: python3 -m unittest discover -s tests -p 'test_public_ci.py' -v
+      - name: Confirm no firmware build performed
+        run: echo "Infrastructure smoke test only; Momentum firmware, Flipper FAP, and Android APK are NOT built or verified."
