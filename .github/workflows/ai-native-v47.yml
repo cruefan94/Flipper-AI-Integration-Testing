@@ -1,0 +1,23 @@
+name: AI1 native protocol public snapshot v47
+on:
+  push:
+    branches: ['test/ai-native-v47']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native-protocol:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile and execute wire client and link tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd snapshot/v46
+          mkdir -p /tmp/ai-native
+          gcc -std=c11 -O1 -g -Wall -Wextra -Werror -pedantic -fsanitize=address,undefined -fno-omit-frame-pointer flipper_app/satellite_protocol/ai_wire.c tests/native/ai_wire_test.c -o /tmp/ai-native/wire
+          gcc -std=c11 -O1 -g -Wall -Wextra -Werror -pedantic -fsanitize=address,undefined -fno-omit-frame-pointer flipper_app/satellite_protocol/ai_wire.c flipper_app/satellite_protocol/ai_client.c tests/native/ai_client_test.c -o /tmp/ai-native/client
+          gcc -std=c11 -O1 -g -Wall -Wextra -Werror -pedantic -fsanitize=address,undefined -fno-omit-frame-pointer flipper_app/satellite_protocol/ai_wire.c flipper_app/satellite_protocol/ai_client.c flipper_app/satellite_protocol/ai_link.c tests/native/ai_link_test.c -o /tmp/ai-native/link
+          for test in wire client link; do /tmp/ai-native/"$test"; done
