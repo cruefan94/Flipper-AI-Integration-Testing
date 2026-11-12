@@ -44,9 +44,24 @@ class Gateway:
             detail = ""
             try:
                 body = json.loads(exc.read(4096).decode("utf-8"))
-                code = body.get("error", {}).get("code")
+                problem = body.get("error", {})
+                code = problem.get("code") if isinstance(problem, dict) else None
                 if isinstance(code, str) and code in safe_codes:
                     detail = f" ({code})"
+                elif exc.code == 403:
+                    message = problem.get("message", "") if isinstance(problem, dict) else ""
+                    if isinstance(message, str):
+                        low = message.lower()
+                        if any(word in low for word in ("country", "region", "location")):
+                            detail = " (geographic restriction)"
+                        elif "organization" in low:
+                            detail = " (organization restriction)"
+                        elif any(word in low for word in ("model", "permission")):
+                            detail = " (model or permission restriction)"
+                        elif "ip address" in low:
+                            detail = " (IP restriction)"
+                        elif any(word in low for word in ("blocked", "restricted")):
+                            detail = " (access restriction)"
             except (ValueError, UnicodeError, AttributeError, TypeError):
                 pass
             raise GatewayError(f"Provider HTTP status {exc.code}{detail}; check provider permissions or access policy") from None
