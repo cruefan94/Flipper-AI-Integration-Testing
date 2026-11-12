@@ -1,0 +1,22 @@
+{
+  "default_provider": "mock",
+  "providers": {
+    "mock": {
+      "kind": "mock"
+    },
+    "external": {
+      "kind": "openai_compatible",
+      "endpoint": "https://api.openai.com/v1/chat/completions",
+      "model": "gpt-4.1-mini",
+      "api_key_env": "FLIPPER_AI_EXTERNAL_API_KEY",
+      "requires_api_key": true
+    },
+    "flipper_local": {
+      "kind": "openai_compatible",
+      "endpoint": "http://127.0.0.1:8080/v1/chat/completions",
+      "model": "flipper-local",
+      "requires_api_key": false,
+      "allow_http_local": true
+    }
+  }
+}
