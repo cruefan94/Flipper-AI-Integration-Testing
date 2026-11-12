@@ -37,8 +37,19 @@ class Gateway:
                     raise GatewayError("Response too large")
                 return json.loads(raw.decode("utf-8"))
         except error.HTTPError as exc:
-            # Only expose status code, never provider response bodies or credentials.
-            raise GatewayError(f"Provider HTTP status {exc.code}; check API billing, permissions and model access") from None
+            # Only report recognized machine-readable codes, never provider messages.
+            safe_codes = {"model_not_found", "model_permission_denied", "permission_denied",
+                          "invalid_api_key", "authentication_error", "insufficient_quota",
+                          "rate_limit_exceeded", "organization_restricted", "access_denied"}
+            detail = ""
+            try:
+                body = json.loads(exc.read(4096).decode("utf-8"))
+                code = body.get("error", {}).get("code")
+                if isinstance(code, str) and code in safe_codes:
+                    detail = f" ({code})"
+            except (ValueError, UnicodeError, AttributeError, TypeError):
+                pass
+            raise GatewayError(f"Provider HTTP status {exc.code}{detail}; check provider permissions or access policy") from None
         except (error.URLError, ValueError, UnicodeError) as exc:
             raise GatewayError("Provider connection or response failed") from None
 
