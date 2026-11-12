@@ -3,7 +3,7 @@
   "wire_format": "AI1|TYPE|request_id|payload\\n",
   "max_frame_bytes": 180,
   "type_pattern": "[A-Z_]{1,16}",
-  "request_id_min": 0,
+  "request_id_min": 1,
   "request_id_max": 4294967295,
   "payload_forbidden": [
     "|",
@@ -53,5 +53,5 @@
     "Flipper-AI-Momentum-:flipper_app/satellite_protocol/ai_wire.c",
     "Flipper-AI-Android-Satellite:android_satellite/app/src/main/java/com/flipperai/satellite/SatelliteProtocol.java"
   ],
-  "note": "Framing verified by source inspection only; message types listed are examples, not a complete enumerated application protocol. No BLE hardware interoperability implied."
+  "note": "AI1 request IDs must be nonzero on both Momentum and Android. Source contract only; no BLE hardware interoperability implied."
 }
