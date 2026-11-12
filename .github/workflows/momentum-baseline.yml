@@ -1,0 +1,26 @@
+name: Public Momentum baseline compile diagnostic
+on:
+  workflow_dispatch:
+  push:
+    branches: [ci/public-momentum-baseline-v02]
+    paths: ['.github/workflows/momentum-baseline.yml']
+permissions:
+  contents: read
+jobs:
+  upstream-baseline:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 120
+    steps:
+      - name: Checkout pinned upstream Momentum source (no private code)
+        uses: actions/checkout@v4
+        with:
+          repository: Next-Flip/Momentum-Firmware
+          ref: mntm-012
+          submodules: recursive
+          fetch-depth: 0
+      - name: Verify pinned upstream revision
+        run: test "$(git rev-parse HEAD)" = "e1784e7418d8b074e971983ceb6fef0f37e52ae4"
+      - name: Compile unmodified upstream Momentum baseline
+        run: ./fbt TARGET_HW=7 COMPACT=1 DEBUG=0 updater_package -j2
+      - name: Report baseline result
+        run: echo "Unmodified upstream Momentum compiled on a public GitHub runner; this does not verify private AI overlays or device behavior."
