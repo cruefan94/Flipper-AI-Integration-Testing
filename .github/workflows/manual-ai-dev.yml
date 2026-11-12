@@ -1,0 +1,59 @@
+name: Manual AI development assistant
+on:
+  workflow_dispatch:
+    inputs:
+      prompt:
+        description: "Non-sensitive development question (no secrets or private source)"
+        required: true
+        type: string
+      provider:
+        description: "Provider to use"
+        required: true
+        default: mock
+        type: choice
+        options:
+          - mock
+          - external
+permissions:
+  contents: read
+jobs:
+  ask-ai:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      FLIPPER_AI_DEV_NETWORK: ${{ inputs.provider == 'external' && '1' || '0' }}
+      FLIPPER_AI_EXTERNAL_API_KEY: ${{ secrets.FLIPPER_AI_EXTERNAL_API_KEY }}
+      DEV_PROMPT: ${{ inputs.prompt }}
+      DEV_PROVIDER: ${{ inputs.provider }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/ai-dev-gateway-v01
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Run read-only gateway
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          from scripts.ai_dev_gateway import Gateway, GatewayError
+          from scripts.public_prompt_guard import check_public_prompt
+          config = json.loads(Path("config/ai_dev_gateway.example.json").read_text(encoding="utf-8"))
+          try:
+              result = Gateway(config).ask(check_public_prompt(os.environ["DEV_PROMPT"]), os.environ["DEV_PROVIDER"])
+          except (GatewayError, ValueError) as exc:
+              raise SystemExit(f"Gateway request failed: {exc}")
+          # The prompt and model output are never executed as shell commands.
+          # Deliberately do not print model output into public CI logs.
+          Path("ai-response.txt").write_text(result["answer"], encoding="utf-8")
+          print("Gateway request completed. Download the response artifact to review it.")
+          PY
+      - name: Upload review-only AI response
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-development-response
+          path: ai-response.txt
+          retention-days: 1
