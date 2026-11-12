@@ -19,6 +19,10 @@ class PublicContractTests(unittest.TestCase):
         for name in ("PING","STATUS","ASK","ANSWER"):
             self.assertIn("request_id",messages[name])
 
+    def test_nonzero_request_ids(self):
+        self.assertEqual(self.contract["request_id_min"], 1)
+        self.assertEqual(self.contract["request_id_max"], 4294967295)
+
     def test_security_defaults(self):
         policy=self.contract["security"]
         self.assertFalse(policy["secrets_on_flipper"])
