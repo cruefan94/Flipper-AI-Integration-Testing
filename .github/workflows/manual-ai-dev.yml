@@ -38,10 +38,11 @@ jobs:
           import os
           from pathlib import Path
           from scripts.ai_dev_gateway import Gateway, GatewayError
+          from scripts.public_prompt_guard import check_public_prompt
           config = json.loads(Path("config/ai_dev_gateway.example.json").read_text(encoding="utf-8"))
           try:
-              result = Gateway(config).ask(os.environ["DEV_PROMPT"], os.environ["DEV_PROVIDER"])
-          except GatewayError as exc:
+              result = Gateway(config).ask(check_public_prompt(os.environ["DEV_PROMPT"]), os.environ["DEV_PROVIDER"])
+          except (GatewayError, ValueError) as exc:
               raise SystemExit(f"Gateway request failed: {exc}")
           # The prompt and model output are never executed as shell commands.
           # Deliberately do not print model output into public CI logs.
