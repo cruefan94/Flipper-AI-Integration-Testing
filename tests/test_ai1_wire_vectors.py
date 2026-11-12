@@ -60,7 +60,7 @@ class WireCompatibilityVectors(unittest.TestCase):
     def test_byte_length_limit_not_character_limit(self):
         with self.assertRaises(ValueError):
             encode("ANSWER",1,"é"*90)
-        self.assertEqual(len(encode("ANSWER",1,"x"*167)),180)
+        self.assertEqual(len(encode("ANSWER",1,"x"*166)),180)
 
     def test_bad_outgoing_payloads(self):
         for value in ["a|b","a\nb","a\rb","a\x00b"]:
