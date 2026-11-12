@@ -1,5 +1,16 @@
 {
   "schema_version": 1,
+  "wire_format": "AI1|TYPE|request_id|payload\\n",
+  "max_frame_bytes": 180,
+  "type_pattern": "[A-Z_]{1,16}",
+  "request_id_min": 0,
+  "request_id_max": 4294967295,
+  "payload_forbidden": [
+    "|",
+    "\\r",
+    "\\n",
+    "\\u0000"
+  ],
   "transport": [
     "ble",
     "wifi",
@@ -7,37 +18,29 @@
   ],
   "messages": [
     {
-      "type": "ping",
+      "type": "PING",
       "fields": [
         "request_id"
       ]
     },
     {
-      "type": "status_request",
+      "type": "STATUS",
       "fields": [
         "request_id"
       ]
     },
     {
-      "type": "status_response",
+      "type": "ASK",
       "fields": [
         "request_id",
-        "connected",
-        "transport"
+        "payload"
       ]
     },
     {
-      "type": "ai_request",
+      "type": "ANSWER",
       "fields": [
         "request_id",
-        "prompt"
-      ]
-    },
-    {
-      "type": "ai_response",
-      "fields": [
-        "request_id",
-        "text"
+        "payload"
       ]
     }
   ],
@@ -46,5 +49,9 @@
     "github_tokens_on_flipper": false,
     "write_operations_require_consent": true
   },
-  "note": "Proposed public contract; not yet confirmed against current firmware or Android wire format."
+  "source_references": [
+    "Flipper-AI-Momentum-:flipper_app/satellite_protocol/ai_wire.c",
+    "Flipper-AI-Android-Satellite:android_satellite/app/src/main/java/com/flipperai/satellite/SatelliteProtocol.java"
+  ],
+  "note": "Framing verified by source inspection only; message types listed are examples, not a complete enumerated application protocol. No BLE hardware interoperability implied."
 }
