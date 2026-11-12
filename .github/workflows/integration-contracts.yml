@@ -1,0 +1,19 @@
+name: Public Flipper AI integration contract tests
+on:
+  push:
+    branches: [main, 'feature/**']
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  protocol-contracts:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Run public-safe protocol contract tests
+        run: python -m unittest discover -s tests -p 'test_*.py' -v
