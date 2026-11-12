@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     env:
-      FLIPPER_AI_DEV_NETWORK: ${{ inputs.provider == 'external' && '1' || '0' }}
+      FLIPPER_AI_DEV_NETWORK: ${{ (inputs.provider == 'external' || inputs.provider == 'groq_free') && '1' || '0' }}
       FLIPPER_AI_EXTERNAL_API_KEY: ${{ secrets.FLIPPER_AI_EXTERNAL_API_KEY }}
       FLIPPER_AI_GROQ_API_KEY: ${{ secrets.FLIPPER_AI_GROQ_API_KEY }}
       DEV_PROMPT: ${{ inputs.prompt }}
