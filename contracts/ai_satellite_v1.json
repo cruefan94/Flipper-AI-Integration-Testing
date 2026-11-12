@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "transport": [
+    "ble",
+    "wifi",
+    "usb_future"
+  ],
+  "messages": [
+    {
+      "type": "ping",
+      "fields": [
+        "request_id"
+      ]
+    },
+    {
+      "type": "status_request",
+      "fields": [
+        "request_id"
+      ]
+    },
+    {
+      "type": "status_response",
+      "fields": [
+        "request_id",
+        "connected",
+        "transport"
+      ]
+    },
+    {
+      "type": "ai_request",
+      "fields": [
+        "request_id",
+        "prompt"
+      ]
+    },
+    {
+      "type": "ai_response",
+      "fields": [
+        "request_id",
+        "text"
+      ]
+    }
+  ],
+  "security": {
+    "secrets_on_flipper": false,
+    "github_tokens_on_flipper": false,
+    "write_operations_require_consent": true
+  },
+  "note": "Proposed public contract; not yet confirmed against current firmware or Android wire format."
+}
