@@ -36,8 +36,11 @@ class Gateway:
                 if len(raw) > 1024 * 1024:
                     raise GatewayError("Response too large")
                 return json.loads(raw.decode("utf-8"))
+        except error.HTTPError as exc:
+            # Only expose status code, never provider response bodies or credentials.
+            raise GatewayError(f"Provider HTTP status {exc.code}; check API billing, permissions and model access") from None
         except (error.URLError, ValueError, UnicodeError) as exc:
-            raise GatewayError("Provider request failed") from exc
+            raise GatewayError("Provider connection or response failed") from None
 
     def ask(self, prompt, provider=None):
         if not isinstance(prompt, str) or not prompt.strip() or len(prompt) > 20000:
