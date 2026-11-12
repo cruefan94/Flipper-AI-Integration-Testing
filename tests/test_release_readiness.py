@@ -23,6 +23,16 @@ class ReleaseReadinessTests(unittest.TestCase):
         report["android"]["commit_sha"] = SHA
         self.assertTrue(any("immutable" in x for x in verify(report)))
 
+    def test_public_ci_alone_cannot_certify_release(self):
+        report = {name: evidence() for name in ("firmware", "android", "protocol", "hardware_ble", "packaging")}
+        report["firmware"]["commit_sha"] = SHA
+        report["android"]["commit_sha"] = SHA
+        report["firmware"]["verified"] = False
+        report["hardware_ble"]["verified"] = False
+        blockers = verify(report)
+        self.assertIn("firmware: not verified", blockers)
+        self.assertIn("hardware_ble: not verified", blockers)
+
     def test_all_evidence_passes(self):
         report = {name: evidence() for name in ("firmware", "android", "protocol", "hardware_ble", "packaging")}
         report["firmware"]["commit_sha"] = SHA
