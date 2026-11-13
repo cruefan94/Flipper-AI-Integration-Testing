@@ -1,0 +1,27 @@
+name: Public runner smoke test (no private source)
+on:
+  push:
+    branches:
+      - ci/public-runner-recovery-20261112
+    paths:
+      - .github/workflows/public-runner-smoke-20261112.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  public-runner-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify runner and Python without private firmware
+        run: |
+          python3 --version
+          python3 -c 'import ast; ast.parse("value = 42"); print("python smoke OK")'
+      - name: Verify Node runtime
+        run: |
+          node --version
+          node -e 'if (1 + 1 !== 2) process.exit(1); console.log("node smoke OK")'
+      - name: Report public-only test boundary
+        run: |
+          echo "This workflow does not fetch private Momentum firmware or credentials."
