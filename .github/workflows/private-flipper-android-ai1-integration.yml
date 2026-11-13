@@ -26,6 +26,11 @@ jobs:
             echo "::error::Read-only FLIPPER_PRIVATE_SOURCE_TOKEN is required for private source access."
             exit 1
           fi
+      - name: Checkout public contract test harness
+        uses: actions/checkout@v4
+        with:
+          path: public-tests
+          persist-credentials: false
       - name: Checkout current public Android Satellite branch
         uses: actions/checkout@v4
         with:
@@ -62,13 +67,12 @@ jobs:
             "$RUNNER_TEMP/private-flipper"
           test -s "$RUNNER_TEMP/private-flipper/tests/integration/test_c_java_protocol.py"
           test -s "$GITHUB_WORKSPACE/android-current/android_satellite/app/src/main/java/com/flipperai/satellite/SatelliteRequestHandler.java"
-      - name: Test real Flipper C client against current Android Java handler
+      - name: Test private Flipper C against actual public Android Java source
         shell: bash
-        env:
-          ANDROID_SATELLITE_ROOT: ${{ github.workspace }}/android-current
         run: |
           set -euo pipefail
-          # No private source or unencrypted firmware is published.
-          python3 "$RUNNER_TEMP/private-flipper/tests/integration/test_c_java_protocol.py"
-          echo "Flipper C HELLO/ASK -> current Android Java answer: HOST-ONLY PASS"
-          echo "Physical BLE encryption, CCCD, MTU and model inference remain UNTESTED"
+          # Use C and fixtures from temporary PRIVATE checkout, but Java ONLY
+          # from the current separately checked-out PUBLIC Android repository.
+          python3 "$GITHUB_WORKSPACE/public-tests/scripts/run_cross_repository_ai1.py" \
+            "$RUNNER_TEMP/private-flipper" "$GITHUB_WORKSPACE/android-current"
+          echo "HOST-ONLY PASS: physical BLE, CCCD, MTU, and AI inference still untested"
