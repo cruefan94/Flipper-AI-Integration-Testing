@@ -48,7 +48,7 @@ jobs:
           export HOME="$RUNNER_TEMP"
           mv "$RUNNER_TEMP/private.netrc" "$HOME/.netrc"
           trap 'rm -f "$HOME/.netrc"' EXIT
-          git -c http.extraheader= clone --quiet --depth 1 --branch fix/momentum-installer-preflight-v56 \
+          git -c http.extraheader= clone --quiet --depth 1 --branch feature/momentum-ble-first-consent-v61 \
             https://github.com/cruefan94/Flipper-AI-Momentum-.git "$RUNNER_TEMP/private-ai"
           test -f "$RUNNER_TEMP/private-ai/momentum_overlay/install_source_overlay.py"
       - name: Clone pinned upstream Momentum
@@ -62,6 +62,7 @@ jobs:
           cd "$RUNNER_TEMP/private-ai"
           python3 -m py_compile momentum_overlay/install_source_overlay.py momentum_overlay/install_trusted_gap_hook.py momentum_overlay/install_bt_ai_api.py momentum_overlay/mark_internal_api.py scripts/patch_app.py
           python3 -m unittest discover -s momentum_overlay/tests -p 'test_*.py' -v
+          python3 -m unittest discover -s tests -p 'test_ble_ui_guards.py' -v
       - name: Apply AI source overlays
         run: |
           set -euo pipefail
@@ -164,7 +165,7 @@ jobs:
       - name: Upload encrypted firmware package only
         uses: actions/upload-artifact@v4
         with:
-          name: encrypted-flipper-ai-updater
+          name: encrypted-flipper-ai-ble-first-v61-UNTESTED
           path: ${{ runner.temp }}/flipper-ai-updater.tar.gz.enc
           if-no-files-found: error
           retention-days: 7
