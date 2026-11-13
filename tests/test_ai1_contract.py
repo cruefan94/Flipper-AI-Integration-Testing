@@ -31,6 +31,30 @@ class ContractTests(unittest.TestCase):
     def test_size(self):
         with self.assertRaises(ValueError):
             encode("ASK", 1, "x" * 180)
+    def test_boundary_max_frame(self):
+        # Header is ASCII; payload capacity is measured in UTF-8 bytes.
+        header_len = len(encode("ASK", 1, ""))
+        self.assertEqual(len(encode("ASK", 1, "x" * (MAX_BYTES - header_len))), MAX_BYTES)
+        with self.assertRaises(ValueError):
+            encode("ASK", 1, "x" * (MAX_BYTES - header_len + 1))
+
+    def test_unicode_byte_boundary(self):
+        base = len(encode("ASK", 1, ""))
+        # One supplementary character consumes four bytes, not one.
+        fit = (MAX_BYTES - base) // 4
+        self.assertLessEqual(len(encode("ASK", 1, "🔊" * fit)), MAX_BYTES)
+        with self.assertRaises(ValueError):
+            encode("ASK", 1, "🔊" * (fit + 1))
+
+    def test_control_character_rejection(self):
+        for payload in ("line\\nfeed", "carriage\\rreturn", "tab\\t", "\\x00", "\\x7f"):
+            with self.subTest(payload=repr(payload)):
+                with self.assertRaises(ValueError):
+                    encode("ASK", 1, payload)
+
+    def test_request_id_upper_boundary(self):
+        self.assertIn(b"|4294967295|", encode("PING", 0xffffffff, "ok"))
+
     def test_invalid_surrogate(self):
         with self.assertRaises(UnicodeEncodeError):
             encode("ASK", 1, "\ud800")
