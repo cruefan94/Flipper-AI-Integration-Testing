@@ -10,7 +10,7 @@ def encode(kind, request_id, payload):
         raise ValueError("type")
     if any(c == "|" or ord(c) < 32 or ord(c) == 127 for c in payload):
         raise ValueError("payload")
-    frame = f"AI1|{kind}|{request_id}|{payload}\\n".replace("\\\\n", "\\n")
+    frame = f"AI1|{kind}|{request_id}|{payload}\n"
     data = frame.encode("utf-8", errors="strict")
     if len(data) > MAX_BYTES:
         raise ValueError("too large")
@@ -18,7 +18,7 @@ def encode(kind, request_id, payload):
 
 class ContractTests(unittest.TestCase):
     def test_hello(self):
-        self.assertEqual(encode("HELLO", 1, "flipper-v1"), b"AI1|HELLO|1|flipper-v1\\n".replace(b"\\\\n", b"\\n"))
+        self.assertEqual(encode("HELLO", 1, "flipper-v1"), b"AI1|HELLO|1|flipper-v1\n")
     def test_unicode(self):
         self.assertIn("🔊".encode("utf-8"), encode("ASK", 2, "radio 🔊"))
     def test_invalid_id(self):
@@ -33,7 +33,7 @@ class ContractTests(unittest.TestCase):
             encode("ASK", 1, "x" * 180)
     def test_invalid_surrogate(self):
         with self.assertRaises(UnicodeEncodeError):
-            encode("ASK", 1, "\\ud800")
+            encode("ASK", 1, "\ud800")
 
 if __name__ == "__main__":
     unittest.main()
