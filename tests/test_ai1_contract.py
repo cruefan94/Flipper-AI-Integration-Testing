@@ -47,7 +47,7 @@ class ContractTests(unittest.TestCase):
             encode("ASK", 1, "🔊" * (fit + 1))
 
     def test_control_character_rejection(self):
-        for payload in ("line\\nfeed", "carriage\\rreturn", "tab\\t", "\\x00", "\\x7f"):
+        for payload in ("line\nfeed", "carriage\rreturn", "tab\t", "\x00", "\x7f"):
             with self.subTest(payload=repr(payload)):
                 with self.assertRaises(ValueError):
                     encode("ASK", 1, payload)
