@@ -1,6 +1,9 @@
 name: Private Momentum AI compile on public runner
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/private-momentum-ai-build.yml'
 permissions:
   contents: read
 jobs:
