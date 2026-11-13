@@ -1,0 +1,42 @@
+name: Public ESP Flasher FAP build (upstream, not Momentum verified)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  upstream-esp-flasher:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 35
+    steps:
+      - name: Clone open-source flasher with its submodules
+        run: |
+          set -euo pipefail
+          git clone --depth 1 --recurse-submodules https://github.com/0xchocolate/flipperzero-esp-flasher.git esp-flasher
+          test -s esp-flasher/LICENSE
+          test -s esp-flasher/application.fam
+          grep -qi 'GNU GENERAL PUBLIC LICENSE' esp-flasher/LICENSE
+          grep -q 'ESP32-S2' esp-flasher/ReadMe.md
+          git -C esp-flasher rev-parse HEAD > upstream-commit.txt
+      - name: Install upstream Flipper build tool
+        run: python3 -m pip install --user --upgrade ufbt
+      - name: Compile FAP against official SDK
+        working-directory: esp-flasher
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.local/bin:$PATH"
+          ufbt
+      - name: Collect public FAP and license
+        run: |
+          set -euo pipefail
+          mkdir -p output
+          find esp-flasher/dist -name '*.fap' -type f -exec cp {} output/ \;
+          test -n "$(find output -name '*.fap' -type f -print -quit)"
+          cp esp-flasher/LICENSE output/GPL-3.0-LICENSE.txt
+          cp upstream-commit.txt output/upstream-commit.txt
+          printf '%s\n' 'UPSTREAM BUILD ONLY. NOT VERIFIED AGAINST MOMENTUM OR YOUR THIRD-PARTY ESP32-S2 BOARD.' > output/READ_ME_FIRST.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: public-upstream-esp-flasher-UNTESTED
+          path: output/
+          if-no-files-found: error
+          retention-days: 7
