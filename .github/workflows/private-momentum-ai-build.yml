@@ -59,7 +59,7 @@ jobs:
           python3 momentum_overlay/install_trusted_gap_hook.py "$RUNNER_TEMP/momentum-fw"
           python3 momentum_overlay/install_bt_ai_api.py "$RUNNER_TEMP/momentum-fw"
           python3 momentum_overlay/mark_internal_api.py "$RUNNER_TEMP/momentum-fw/targets/f7/api_symbols.csv"
-          python3 scripts/patch_app.py "$RUNNER_TEMP/momentum-fw"
+          python3 scripts/patch_app.py "$RUNNER_TEMP/momentum-fw" --mode internal --autostart yes --ble-experimental
       - name: Compile custom Momentum AI firmware
         working-directory: ${{ runner.temp }}/momentum-fw
         run: |
