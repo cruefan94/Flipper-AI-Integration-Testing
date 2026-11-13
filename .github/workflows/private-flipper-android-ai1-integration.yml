@@ -15,6 +15,7 @@ jobs:
         private_ref:
           - fix/momentum-installer-preflight-v56
           - fix/android-ci-successor-branches-v58
+          - feature/momentum-ble-first-consent-v61
     runs-on: ubuntu-24.04
     timeout-minutes: 12
     steps:
@@ -67,6 +68,13 @@ jobs:
             "$RUNNER_TEMP/private-flipper"
           test -s "$RUNNER_TEMP/private-flipper/tests/integration/test_c_java_protocol.py"
           test -s "$GITHUB_WORKSPACE/android-current/android_satellite/app/src/main/java/com/flipperai/satellite/SatelliteRequestHandler.java"
+      - name: Validate private Momentum BLE-first UI and transport guards
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover \
+            -s "$RUNNER_TEMP/private-flipper/tests" \
+            -p 'test_ble_ui_guards.py' -v
       - name: Audit GATT UUID and secure transport contract across both repositories
         shell: bash
         run: |
