@@ -6,6 +6,7 @@ on:
     paths:
       - .github/workflows/public-runner-smoke-20261112.yml
       - tests/test_public_ai1_smoke.py
+      - tests/PublicAi1Fixture.java
   workflow_dispatch:
 permissions:
   contents: read
@@ -21,6 +22,11 @@ jobs:
           python3 -c 'import ast; ast.parse("value = 42"); print("python smoke OK")'
       - name: Run public-safe protocol smoke tests
         run: python3 -m unittest discover -s tests -p 'test_public_ai1_smoke.py' -v
+      - name: Run independent Java framing fixture
+        run: |
+          mkdir -p /tmp/flipper-ai-java-fixture
+          javac -d /tmp/flipper-ai-java-fixture tests/PublicAi1Fixture.java
+          java -cp /tmp/flipper-ai-java-fixture PublicAi1Fixture
       - name: Verify Node runtime
         run: |
           node --version
