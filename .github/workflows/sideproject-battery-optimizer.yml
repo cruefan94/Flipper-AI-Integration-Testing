@@ -1,0 +1,30 @@
+name: Side project - battery optimizer host checks
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'sideproject/flipper-ai-battery-optimizer-*'
+    paths:
+      - 'side_projects/flipper_ai_battery_optimizer/**'
+      - '.github/workflows/sideproject-battery-optimizer.yml'
+permissions:
+  contents: read
+jobs:
+  java-core:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Compile independent Java core and host tests
+        run: |
+          mkdir -p /tmp/flipper-ai-battery-classes
+          javac -Xlint:all -Werror -d /tmp/flipper-ai-battery-classes \
+            side_projects/flipper_ai_battery_optimizer/src/flipperai/battery/BatteryOptimizer.java \
+            side_projects/flipper_ai_battery_optimizer/tests/flipperai/battery/BatteryOptimizerTest.java
+          java -cp /tmp/flipper-ai-battery-classes flipperai.battery.BatteryOptimizerTest
+      - name: Run existing public AI1 wire contract tests (regression)
+        run: python3 -m unittest discover -s tests -p 'test_ai1_contract.py' -v
