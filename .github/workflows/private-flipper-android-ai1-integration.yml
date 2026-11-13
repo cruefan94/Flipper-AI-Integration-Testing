@@ -16,6 +16,7 @@ jobs:
           - fix/momentum-installer-preflight-v56
           - fix/android-ci-successor-branches-v58
           - feature/momentum-ble-first-consent-v61
+          - feature/momentum-ble-hardware-status-v62
     runs-on: ubuntu-24.04
     timeout-minutes: 12
     steps:
