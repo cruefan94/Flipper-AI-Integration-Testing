@@ -16,6 +16,14 @@ jobs:
             echo "::error::Configure repository secret FLIPPER_PRIVATE_SOURCE_TOKEN with read-only Contents access to the private firmware repository."
             exit 1
           fi
+      - name: Require encrypted delivery secret before building
+        env:
+          DELIVERY_PASSPHRASE: ${{ secrets.FLIPPER_ARTIFACT_PASSPHRASE }}
+        run: |
+          if [ "${#DELIVERY_PASSPHRASE}" -lt 20 ]; then
+            echo "::error::Set FLIPPER_ARTIFACT_PASSPHRASE to a unique random passphrase of at least 20 characters; no plaintext firmware will be uploaded."
+            exit 1
+          fi
       - name: Checkout public test harness
         uses: actions/checkout@v4
         with:
@@ -79,7 +87,51 @@ jobs:
         run: |
           set -euo pipefail
           ./fbt TARGET_HW=7 COMPACT=1 copro_dist updater_package fap_dist -j2
+      - name: Verify updater package and encrypt for private delivery
+        env:
+          DELIVERY_PASSPHRASE: ${{ secrets.FLIPPER_ARTIFACT_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          umask 077
+          python3 - <<'PY'
+          import hashlib, json, os, pathlib, tarfile
+          root = pathlib.Path(os.environ["RUNNER_TEMP"]) / "momentum-fw/dist/f7-C"
+          dirs = sorted(p for p in root.glob("f7-update-*") if p.is_dir())
+          if len(dirs) != 1:
+              raise SystemExit(f"Expected one firmware updater directory, got {len(dirs)}")
+          directory = dirs[0]
+          files = sorted(p for p in directory.rglob("*") if p.is_file())
+          if not files or not any(p.suffix == ".dfu" for p in files):
+              raise SystemExit("Updater missing expected .dfu firmware image")
+          if not any(p.suffix == ".tgz" for p in files) and not any(p.suffix == ".bin" for p in files):
+              print("No additional .bin/.tgz component; checking updater contents only")
+          manifest = {"updater": directory.name, "files": {
+              str(p.relative_to(directory)): {"size": p.stat().st_size, "sha256": hashlib.sha256(p.read_bytes()).hexdigest()}
+              for p in files}}
+          output = pathlib.Path(os.environ["RUNNER_TEMP"]) / "firmware-delivery"
+          output.mkdir(mode=0o700, exist_ok=True)
+          (output / "SHA256-manifest.json").write_text(json.dumps(manifest, indent=2))
+          archive = output / "flipper-ai-updater.tar.gz"
+          with tarfile.open(archive, "w:gz") as tar:
+              tar.add(directory, arcname=directory.name)
+              tar.add(output / "SHA256-manifest.json", arcname="SHA256-manifest.json")
+          print(f"Verified {len(files)} updater files; package prepared for encryption")
+          PY
+          openssl enc -aes-256-cbc -pbkdf2 -iter 250000 -salt \
+            -in "$RUNNER_TEMP/firmware-delivery/flipper-ai-updater.tar.gz" \
+            -out "$RUNNER_TEMP/flipper-ai-updater.tar.gz.enc" \
+            -pass env:DELIVERY_PASSPHRASE
+          test -s "$RUNNER_TEMP/flipper-ai-updater.tar.gz.enc"
+          rm -rf "$RUNNER_TEMP/firmware-delivery"
+          echo "Encrypted firmware package prepared; plaintext removed before upload."
+      - name: Upload encrypted firmware package only
+        uses: actions/upload-artifact@v4
+        with:
+          name: encrypted-flipper-ai-updater
+          path: ${{ runner.temp }}/flipper-ai-updater.tar.gz.enc
+          if-no-files-found: error
+          retention-days: 7
       - name: Report verified scope without publishing private binaries
         run: |
           echo "Custom AI firmware compile succeeded on the public runner."
-          echo "Private source and firmware packages were not uploaded as public artifacts."
+          echo "Only a passphrase-encrypted firmware archive was uploaded; no plaintext firmware or private source was published."
