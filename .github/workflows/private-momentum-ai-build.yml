@@ -48,7 +48,7 @@ jobs:
           export HOME="$RUNNER_TEMP"
           mv "$RUNNER_TEMP/private.netrc" "$HOME/.netrc"
           trap 'rm -f "$HOME/.netrc"' EXIT
-          git -c http.extraheader= clone --quiet --depth 1 --branch feature/momentum-ble-first-consent-v61 \
+          git -c http.extraheader= clone --quiet --depth 1 --branch feature/momentum-ble-hardware-status-v62 \
             https://github.com/cruefan94/Flipper-AI-Momentum-.git "$RUNNER_TEMP/private-ai"
           test -f "$RUNNER_TEMP/private-ai/momentum_overlay/install_source_overlay.py"
       - name: Clone pinned upstream Momentum
@@ -165,7 +165,7 @@ jobs:
       - name: Upload encrypted firmware package only
         uses: actions/upload-artifact@v4
         with:
-          name: encrypted-flipper-ai-ble-first-v61-UNTESTED
+          name: encrypted-flipper-ai-hardware-status-v62-UNTESTED
           path: ${{ runner.temp }}/flipper-ai-updater.tar.gz.enc
           if-no-files-found: error
           retention-days: 7
