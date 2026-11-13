@@ -22,6 +22,59 @@ jobs:
         run: |
           set -euo pipefail
           ./fbt TARGET_HW=7 COMPACT=1 copro_dist updater_package fap_dist -j2
+      - name: Collect reproducible baseline updater artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p baseline-output
+          python3 - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+          import shutil
+          root = Path("momentum-fw")
+          out = Path("baseline-output")
+          candidates = sorted(
+              p for p in root.rglob("*.tgz")
+              if p.is_file() and ("update" in str(p).lower() or "f7" in str(p).lower())
+          )
+          if not candidates:
+              candidates = sorted(
+                  p for p in root.rglob("*.zip")
+                  if p.is_file() and ("update" in str(p).lower() or "f7" in str(p).lower())
+              )
+          if not candidates:
+              raise SystemExit("No updater archive found; inspect FBT output paths before publishing")
+          manifest = {
+              "scope": "UNMODIFIED_PUBLIC_UPSTREAM_MOMENTUM_ONLY",
+              "private_ai_source_included": False,
+              "upstream_commit": "d3f89dfe2ef6b01839201598e9be1590cba80322",
+              "artifacts": []
+          }
+          for index, src in enumerate(candidates):
+              name = f"{index:02d}-" + src.name
+              dst = out / name
+              shutil.copy2(src, dst)
+              manifest["artifacts"].append({
+                  "file": name,
+                  "sha256": hashlib.sha256(dst.read_bytes()).hexdigest(),
+                  "bytes": dst.stat().st_size
+              })
+          (out / "MANIFEST.json").write_text(json.dumps(manifest, indent=2) + "\\n")
+          (out / "NOT_CUSTOM_AI_FIRMWARE.txt").write_text(
+              "This is a public upstream Momentum baseline build only.\\n"
+              "It does not contain Flipper AI or private firmware modifications.\\n"
+              "Not hardware tested; do not mistake it for a custom AI release.\\n"
+          )
+          print("Collected", len(candidates), "public baseline updater archives")
+          PY
+      - name: Upload baseline build output
+        uses: actions/upload-artifact@v4
+        with:
+          name: momentum-upstream-baseline-UNTESTED
+          path: baseline-output/
+          if-no-files-found: error
+          retention-days: 7
       - name: Report scope
         run: |
           echo 'Public upstream Momentum baseline compile completed.'
