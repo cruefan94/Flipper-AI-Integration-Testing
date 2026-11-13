@@ -23,3 +23,9 @@ Public CI workspace for **Flipper Zero AI Momentum + Android AI Satellite + ESP3
 ## Current limitations
 
 A public GitHub Actions runner cannot automatically access the private firmware repository. This workspace intentionally does not clone it or require private access tokens. Firmware builds are not configured here yet.
+
+## Public AI1 contract test expansion (2026-11-12)
+- Added boundary tests for 180-byte maximum frames, multi-byte UTF-8 characters, control characters and the maximum unsigned 32-bit request ID.
+- GitHub Actions runs the tests on push; success for this revision has not yet been observed.
+- This remains a standalone protocol fixture suite, **not** the Android application's JVM tests or APK compilation.
+- Next: use the public Android source repository to build a complete APK, and validate the private firmware BLE adapter only after source/license review.
