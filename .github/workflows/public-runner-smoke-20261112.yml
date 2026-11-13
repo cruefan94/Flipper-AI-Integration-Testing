@@ -5,6 +5,7 @@ on:
       - ci/public-runner-recovery-20261112
     paths:
       - .github/workflows/public-runner-smoke-20261112.yml
+      - tests/test_public_ai1_smoke.py
   workflow_dispatch:
 permissions:
   contents: read
@@ -18,6 +19,8 @@ jobs:
         run: |
           python3 --version
           python3 -c 'import ast; ast.parse("value = 42"); print("python smoke OK")'
+      - name: Run public-safe protocol smoke tests
+        run: python3 -m unittest discover -s tests -p 'test_public_ai1_smoke.py' -v
       - name: Verify Node runtime
         run: |
           node --version
