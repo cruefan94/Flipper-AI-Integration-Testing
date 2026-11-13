@@ -9,6 +9,12 @@ permissions:
   contents: read
 jobs:
   protocol-integration:
+    strategy:
+      fail-fast: false
+      matrix:
+        private_ref:
+          - fix/momentum-installer-preflight-v56
+          - fix/android-ci-successor-branches-v58
     runs-on: ubuntu-24.04
     timeout-minutes: 12
     steps:
@@ -35,6 +41,7 @@ jobs:
       - name: Clone private Flipper protocol source into runner temp only
         env:
           PRIVATE_TOKEN: ${{ secrets.FLIPPER_PRIVATE_SOURCE_TOKEN }}
+          PRIVATE_REF: ${{ matrix.private_ref }}
         shell: bash
         run: |
           set -euo pipefail
@@ -50,7 +57,7 @@ jobs:
           export GIT_ASKPASS=/bin/false
           trap 'rm -f "$RUNNER_TEMP/.netrc"' EXIT
           git -c http.extraheader= clone --quiet --depth 1 \
-            --branch fix/momentum-installer-preflight-v56 \
+            --branch "$PRIVATE_REF" \
             https://github.com/cruefan94/Flipper-AI-Momentum-.git \
             "$RUNNER_TEMP/private-flipper"
           test -s "$RUNNER_TEMP/private-flipper/tests/integration/test_c_java_protocol.py"
