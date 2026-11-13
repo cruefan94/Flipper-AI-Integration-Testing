@@ -1,0 +1,23 @@
+name: Public ESP32-S2 flash bundle safety
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tests/esp32s2_bundle_preflight.py'
+      - 'tests/test_esp32s2_bundle_preflight.py'
+      - '.github/workflows/esp32s2-public-preflight.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  flash-preflight:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify public source syntax
+        run: python -m py_compile tests/esp32s2_bundle_preflight.py
+      - name: Exercise firmware validation failure cases
+        run: python -m unittest discover -s tests -p 'test_esp32s2_bundle_preflight.py' -v
