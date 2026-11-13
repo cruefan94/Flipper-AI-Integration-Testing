@@ -122,6 +122,40 @@ jobs:
             -out "$RUNNER_TEMP/flipper-ai-updater.tar.gz.enc" \
             -pass env:DELIVERY_PASSPHRASE
           test -s "$RUNNER_TEMP/flipper-ai-updater.tar.gz.enc"
+          # Prove the encrypted artifact can be decrypted and every packaged file matches its manifest.
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 250000 -salt \
+            -in "$RUNNER_TEMP/flipper-ai-updater.tar.gz.enc" \
+            -out "$RUNNER_TEMP/firmware-delivery/roundtrip.tar.gz" \
+            -pass env:DELIVERY_PASSPHRASE
+          python3 - <<'PY'
+          import hashlib, io, json, os, pathlib, tarfile
+          folder = pathlib.Path(os.environ["RUNNER_TEMP"]) / "firmware-delivery"
+          expected = folder / "flipper-ai-updater.tar.gz"
+          recovered = folder / "roundtrip.tar.gz"
+          if hashlib.sha256(expected.read_bytes()).digest() != hashlib.sha256(recovered.read_bytes()).digest():
+              raise SystemExit("Encrypted archive roundtrip mismatch")
+          with tarfile.open(recovered, "r:gz") as archive:
+              members = archive.getmembers()
+              if any(not m.isfile() and not m.isdir() for m in members):
+                  raise SystemExit("Archive contains unsupported entries")
+              names = [m.name for m in members if m.isfile()]
+              if len(names) != len(set(names)):
+                  raise SystemExit("Archive contains duplicate paths")
+              manifest = json.load(archive.extractfile("SHA256-manifest.json"))
+              updater = manifest["updater"]
+              records = manifest["files"]
+              if not records or len(names) != len(records) + 1:
+                  raise SystemExit("Archive file inventory differs from manifest")
+              for relative, record in records.items():
+                  path = pathlib.PurePosixPath(relative)
+                  if path.is_absolute() or ".." in path.parts:
+                      raise SystemExit("Unsafe updater path in manifest")
+                  member = archive.getmember(f"{updater}/{relative}")
+                  data = archive.extractfile(member).read()
+                  if len(data) != record["size"] or hashlib.sha256(data).hexdigest() != record["sha256"]:
+                      raise SystemExit(f"Manifest verification failed: {relative}")
+          print(f"Encrypted archive decrypts correctly; verified {len(records)} file hashes")
+          PY
           rm -rf "$RUNNER_TEMP/firmware-delivery"
           echo "Encrypted firmware package prepared; plaintext removed before upload."
       - name: Upload encrypted firmware package only
