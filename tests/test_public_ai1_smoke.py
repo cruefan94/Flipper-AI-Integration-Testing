@@ -1,48 +1,43 @@
-"""Public-safe AI1 framing smoke tests; illustrative contract, not production parity."""
+"""Public independent AI1 fixture, aligned to Android SatelliteProtocol grammar."""
 import unittest
 
-MAX_FRAME = 256
+MAX_FRAME = 180
 
 def parse_frame(raw):
-    if not isinstance(raw, bytes) or not raw or len(raw) > MAX_FRAME or not raw.endswith(b'\n'):
-        raise ValueError('invalid frame')
-    if b'\r' in raw or b'\x00' in raw:
-        raise ValueError('invalid control byte')
+    if not isinstance(raw, bytes) or not 11 <= len(raw) <= MAX_FRAME or not raw.endswith(b'\n'):
+        raise ValueError("frame")
     try:
-        text = raw[:-1].decode('utf-8', errors='strict')
+        value = raw.decode("utf-8", errors="strict")
     except UnicodeDecodeError as exc:
-        raise ValueError('invalid utf8') from exc
-    parts = text.split('|', 2)
-    if len(parts) != 3 or parts[0] not in ('HELLO', 'ASK', 'ANSWER', 'ERROR'):
-        raise ValueError('invalid message type')
-    if not parts[1].isascii() or not parts[1].isdigit() or len(parts[1]) > 10:
-        raise ValueError('invalid request id')
-    request_id = int(parts[1])
-    if request_id == 0 or request_id > 0xffffffff:
-        raise ValueError('invalid request id')
-    if not parts[2]:
-        raise ValueError('empty payload')
-    return parts[0], request_id, parts[2]
+        raise ValueError("utf8") from exc
+    fields = value[:-1].split("|")
+    if len(fields) != 4 or fields[0] != "AI1":
+        raise ValueError("version or field count")
+    typ, id_text, payload = fields[1:]
+    if not 1 <= len(typ) <= 16 or any(c not in "ABCDEFGHIJKLMNOPQRSTUVWXYZ_" for c in typ):
+        raise ValueError("type")
+    if not 1 <= len(id_text) <= 10 or any(c not in "0123456789" for c in id_text):
+        raise ValueError("id")
+    request_id = int(id_text)
+    if not 1 <= request_id <= 4294967295:
+        raise ValueError("id range")
+    if any(ord(c) < 32 or ord(c) == 127 for c in payload):
+        raise ValueError("payload control")
+    return typ, request_id, payload
 
 class PublicContractTests(unittest.TestCase):
     def test_valid(self):
-        self.assertEqual(parse_frame(b'ASK|7|hello\n'), ('ASK', 7, 'hello'))
-    def test_request_id_boundaries(self):
-        self.assertEqual(parse_frame(b'ASK|1|x\n')[1], 1)
-        self.assertEqual(parse_frame(b'ASK|4294967295|x\n')[1], 4294967295)
-
-    def test_utf8_payload_and_separator(self):
-        self.assertEqual(parse_frame('ASK|17|café|next\\n'.replace('\\n', '\n').encode('utf-8'))[2], 'café|next')
-
-    def test_non_ascii_id_rejected(self):
-        with self.assertRaises(ValueError):
-            parse_frame('ASK|１２|x\\n'.replace('\\n', '\n').encode('utf-8'))
+        self.assertEqual(parse_frame(b"AI1|ASK|7|hello\n"), ("ASK", 7, "hello"))
+        self.assertEqual(parse_frame("AI1|ANSWER|4294967295|café\n".encode())[1], 4294967295)
 
     def test_invalid(self):
-        for raw in [b'', b'ASK|1|hello', b'ASK|0|hello\n', b'ASK|4294967296|x\n', b'ASK|1|\n', b'ASK|1|x\x00\n', b'ASK|1|x\r\n', b'ASK|1|\xff\n', b'ASK|1|'+b'x'*260+b'\n', b'OTHER|1|x\n', b'ASK|+1|x\n']:
-            with self.subTest(raw=raw):
-                with self.assertRaises(ValueError):
-                    parse_frame(raw)
+        bad = [b"", b"ASK|1|hello\n", b"AI1|ASK|1|hello", b"AI1|ASK|0|x\n",
+               b"AI1|ASK|4294967296|x\n", b"AI1|ASK|+1|x\n", b"AI1|ASK|1|x|y\n",
+               b"AI1|ASK|1|x\r\n", b"AI1|ASK|1|x\x00\n", b"AI1|ASK|1|\xff\n",
+               b"AI1|ASK|1|" + b"x"*180 + b"\n", "AI1|ASK|１２|x\n".encode()]
+        for frame in bad:
+            with self.subTest(frame=frame), self.assertRaises(ValueError):
+                parse_frame(frame)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()
