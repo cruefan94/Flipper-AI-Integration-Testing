@@ -67,6 +67,12 @@ jobs:
             "$RUNNER_TEMP/private-flipper"
           test -s "$RUNNER_TEMP/private-flipper/tests/integration/test_c_java_protocol.py"
           test -s "$GITHUB_WORKSPACE/android-current/android_satellite/app/src/main/java/com/flipperai/satellite/SatelliteRequestHandler.java"
+      - name: Audit GATT UUID and secure transport contract across both repositories
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 "$GITHUB_WORKSPACE/public-tests/scripts/check_cross_repository_gatt.py" \
+            "$RUNNER_TEMP/private-flipper" "$GITHUB_WORKSPACE/android-current"
       - name: Test private Flipper C against actual public Android Java source
         shell: bash
         run: |
