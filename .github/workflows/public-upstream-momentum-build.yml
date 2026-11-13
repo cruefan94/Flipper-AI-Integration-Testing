@@ -1,0 +1,28 @@
+name: Public upstream Momentum firmware compile (no private AI source)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  upstream-momentum:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 75
+    steps:
+      - name: Checkout public pinned Momentum source
+        run: |
+          set -euo pipefail
+          git clone --filter=blob:none https://github.com/Next-Flip/Momentum-Firmware.git momentum-fw
+          cd momentum-fw
+          git checkout --detach d3f89dfe2ef6b01839201598e9be1590cba80322
+          test "$(git rev-parse HEAD)" = d3f89dfe2ef6b01839201598e9be1590cba80322
+          git switch -c public-baseline-ci
+          git config branch.public-baseline-ci.remote origin
+      - name: Compile unmodified upstream Momentum baseline
+        working-directory: momentum-fw
+        run: |
+          set -euo pipefail
+          ./fbt TARGET_HW=7 COMPACT=1 copro_dist updater_package fap_dist -j2
+      - name: Report scope
+        run: |
+          echo 'Public upstream Momentum baseline compile completed.'
+          echo 'No private Flipper AI source, secrets, or custom overlay was downloaded or included.'
