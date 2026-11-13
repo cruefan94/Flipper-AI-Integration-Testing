@@ -1,0 +1,17 @@
+name: Public AI1 BLE contract smoke tests
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'tests/test_ai1_contract.py'
+      - '.github/workflows/ai1-contract.yml'
+permissions:
+  contents: read
+jobs:
+  ai1-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify public AI1 protocol fixtures
+        run: python3 -m unittest discover -s tests -p 'test_ai1_contract.py' -v
