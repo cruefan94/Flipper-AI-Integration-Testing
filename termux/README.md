@@ -83,3 +83,21 @@ Output filtering is best-effort only: do not run commands that print secrets or 
 3. Confirm a shell request cannot run without local approval.
 4. Approve harmless pwd, verify correct response, and check restart behavior.
 5. Check output for secrets before enabling any other development operations.
+
+## Prepare verified firmware on Android (no automatic flashing)
+
+The opt-in `firmware_to_phone.py` helper downloads the **latest successful custom Momentum AI firmware** artifact from GitHub, prompts locally for the existing firmware-artifact passphrase, checks the native F7 update archive and its file hashes, then saves the original `flipper-z-f7-update-*.tgz`. Nothing is uploaded from the phone and **nothing is flashed**.
+
+In an **interactive Termux session**, with the phone charged and GitHub CLI already authenticated:
+
+~~~sh
+pkg install -y openssl
+curl -fLsS "https://raw.githubusercontent.com/cruefan94/Flipper-AI-Integration-Testing/main/termux/firmware_to_phone.py" -o "$HOME/.flipper-ai-termux/firmware_to_phone.py"
+python "$HOME/.flipper-ai-termux/firmware_to_phone.py"
+~~~
+
+Output stays private at `~/flipper-ai-workspace/firmware-updates/` by default. To copy the **verified** native update file into Android Downloads for a supported app's file picker, first approve `termux-setup-storage` locally, then use `python "$HOME/.flipper-ai-termux/firmware_to_phone.py" --share-downloads`. An explicit `--run-id` can select a particular successful **main-branch** firmware run, if that encrypted artifact has not expired.
+
+**The private artifact passphrase is not retrievable from the GitHub Actions secret.** If you don't know it, reset `FLIPPER_ARTIFACT_PASSPHRASE` in GitHub Actions repository secrets and run a new firmware build. **Never send the passphrase into chat, a GitHub issue, or a command-line argument.** Run this tool *locally with a visible prompt*, not from the remote bridge's noninteractive approved shell operation.
+
+This helper is not a release endorsement. It checks archive integrity and that the package targets Flipper Zero F7, not whether the experimental AI firmware boots. Have a known-good Momentum update and a confirmed qFlipper/DFU recovery method before choosing to flash the native `.tgz`. The firmware itself remains experimental and hardware-untested.
