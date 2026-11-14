@@ -122,6 +122,18 @@ def find_candidates(repo: str, runs: list[dict], now: datetime) -> list[dict]:
     return candidates
 
 
+def failed_previous_attempt(repo: str, run: dict, token: str) -> bool:
+    """Count a true failed rerun only if GitHub confirms its prior attempt failed."""
+    attempt = int(run.get("run_attempt") or 1)
+    if attempt < 2:
+        return False
+    previous = api(
+        f"/repos/{repo}/actions/runs/{run['id']}/attempts/{attempt - 1}",
+        token,
+    )
+    return previous.get("status") == "completed" and previous.get("conclusion") in FAILURES
+
+
 def trigger_id(item: dict) -> str:
     return item["repo"] + "#" + str(item["run"]["id"])
 
@@ -164,17 +176,20 @@ def monitor():
                 continue
             if item["reason"] == "inspect_pre_job":
                 try:
-                    jobs = api(
-                        f"/repos/{repo}/actions/runs/{item['run']['id']}/jobs?per_page=1",
-                        token,
-                    )
-                    # This is a SUSPECTED pre-job/runner/billing failure, not billing proof.
-                    if jobs.get("total_count", len(jobs.get("jobs", []))) == 0:
-                        item["reason"] = "suspected_runner_or_billing"
+                    if failed_previous_attempt(repo, item["run"], token):
+                        item["reason"] = "two_consecutive_failures"
                     else:
-                        continue
+                        jobs = api(
+                            f"/repos/{repo}/actions/runs/{item['run']['id']}/jobs?per_page=1",
+                            token,
+                        )
+                        # SUSPECTED pre-job/runner/billing failure; not billing proof.
+                        if jobs.get("total_count", len(jobs.get("jobs", []))) == 0:
+                            item["reason"] = "suspected_runner_or_billing"
+                        else:
+                            continue
                 except ApiError as error:
-                    print(f"::warning::Could not inspect jobs for {key}: {error}")
+                    print(f"::warning::Could not inspect attempts/jobs for {key}: {error}")
                     continue
             pending.append(item)
 
