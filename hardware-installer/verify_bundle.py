@@ -122,8 +122,20 @@ def stage(manifest:Path,selected_board:str,destination:Path,approve:bool=False):
     destination=Path(destination)
     if destination.is_symlink() or not destination.is_dir():
         raise BundleError("Destination must be an existing non-symlink directory")
-    if any((destination/name).exists() or (destination/name).is_symlink() for name,_,_ in images):
+    # A host-checked, human-readable plan is bundled alongside the binaries.
+    # The Flipper must never mistake this text for ROM chip identity or approval.
+    sidecar="flipper-ai-esp32-plan.txt"
+    filenames=[name for name,_,_ in images]+[sidecar]
+    if any((destination/name).exists() or (destination/name).is_symlink() for name in filenames):
         raise BundleError("Destination has existing file; overwriting forbidden")
+    plan=(
+        f"FZHW1|BOARD={board.id}|CHIP={board.chip}|VER={version}|HW_UNVERIFIED=1\\n"
+        + "".join(
+            f"IMG|{name}|{hex(offset) if offset is not None else 'NONE'}|{digest}\\n"
+            for name,offset,digest in images
+        )
+        + "NOTICE|SD_COPY_ONLY|ESP_FLASHER_APPROVAL_REQUIRED\\n"
+    ).encode("ascii")
     # Validate all images and targets before staging. Never trigger a flash.
     written=[]
     try:
@@ -142,6 +154,14 @@ def stage(manifest:Path,selected_board:str,destination:Path,approve:bool=False):
             copied=hashlib.sha256(target.read_bytes()).hexdigest()
             if copied!=digest:
                 raise BundleError("Staged SD image failed post-copy SHA256 check")
+        target=destination/sidecar
+        with target.open("xb") as dst:
+            written.append(target)
+            dst.write(plan)
+            dst.flush()
+            os.fsync(dst.fileno())
+        if target.read_bytes()!=plan:
+            raise BundleError("Staged plan did not match verified bundle")
         return written
     except (OSError,BundleError):
         for entry in written:entry.unlink(missing_ok=True)
