@@ -67,6 +67,108 @@ def patch_text(source):
     storage_file_free(bin_file);
     return ESP_LOADER_ERROR_FAIL;
 #endif""")
+    # An MD5 error printed by _flash_file must propagate through the worker.
+    # Upstream _flash_all_files is void and always leaves the outer caller
+    # showing "Done flashing" (and resetting the ESP), even after a failed write.
+    source=once(source,
+      "static void _flash_all_files(EspFlasherApp* app) {",
+      "static bool _flash_all_files(EspFlasherApp* app) {")
+    source=once(source,
+      "    int current_step = 1;",
+      """    if(num_steps <= 0) {
+        loader_port_debug_print("No firmware images selected: refusing flash.\n");
+        return false;
+    }
+    int current_step = 1;""")
+    source=once(source,
+      """            if(err) {
+                break;
+            }""",
+      """            if(err != ESP_LOADER_SUCCESS) {
+                loader_port_debug_print("Image write/MD5 failed; aborting remaining files.\n");
+                return false;
+            }""")
+    source=once(source,
+      """    }
+}
+
+static int32_t esp_flasher_flash_bin(void* context) {""",
+      """    }
+    return true;
+}
+
+static int32_t esp_flasher_flash_bin(void* context) {""")
+
+    # OTA selector also writes two small blocks. Preserve its existing option
+    # but report success ONLY after the chip confirms MD5 on both blocks.
+    source=once(source,
+      "static bool _switch_fw(EspFlasherApp* app) {",
+      """static bool _switch_fw(EspFlasherApp* app, bool* switched_ok) {
+    *switched_ok = false;""")
+    source=once(source,
+      '    loader_port_debug_print("Preparing to set flags for firmware B\\n");',
+      """#if MD5_ENABLED
+    err = esp_loader_flash_verify();
+    if(err != ESP_LOADER_SUCCESS) {
+        loader_port_debug_print("Firmware A flag MD5 FAILED.\n");
+        return true;
+    }
+#else
+    loader_port_debug_print("MD5 unavailable for firmware flags.\n");
+    return true;
+#endif
+    loader_port_debug_print("Preparing to set flags for firmware B\\n");""")
+    source=once(source,
+      """    loader_port_debug_print("Finished programming\\n");
+    return true;
+}""",
+      """#if MD5_ENABLED
+    err = esp_loader_flash_verify();
+    if(err != ESP_LOADER_SUCCESS) {
+        loader_port_debug_print("Firmware B flag MD5 FAILED.\n");
+        return true;
+    }
+#else
+    loader_port_debug_print("MD5 unavailable for firmware flags.\n");
+    return true;
+#endif
+    *switched_ok = true;
+    loader_port_debug_print("Firmware flags programmed and MD5 verified.\n");
+    return true;
+}""")
+
+    source=once(source,
+      """        if(!_switch_fw(app)) {
+            _flash_all_files(app);
+        }
+        app->switch_fw = SwitchNotSet;""",
+      """        bool switched_ok = false;
+        const bool is_switch = _switch_fw(app, &switched_ok);
+        const bool operation_ok = is_switch ? switched_ok : _flash_all_files(app);
+        app->switch_fw = SwitchNotSet;""")
+    source=once(source,
+      """        loader_port_debug_print(
+            "Done flashing. Please reset the board manually if it doesn't auto-reset.\n");
+
+        // auto-reset for supported boards
+        loader_port_reset_target();
+
+        // short buzz to alert user
+        notification_message(app->notification, &sequence_set_vibro_on);
+        loader_port_delay_ms(50);
+        notification_message(app->notification, &sequence_reset_vibro);""",
+      """        if(operation_ok) {
+            loader_port_debug_print(
+                "FLASH VERIFIED. Reset board if it doesn't auto-reset.\n");
+            // Only successful, verified operations may trigger reset/success buzz.
+            loader_port_reset_target();
+            notification_message(app->notification, &sequence_set_vibro_on);
+            loader_port_delay_ms(50);
+            notification_message(app->notification, &sequence_reset_vibro);
+        } else {
+            loader_port_debug_print(
+                "FLASH FAILED / UNVERIFIED. No automatic reset. Check logs and recovery.\n");
+        }""")
     return source
 
 def main():
