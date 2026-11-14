@@ -1,0 +1,168 @@
+name: CI fallback verification (public-safe)
+
+run-name: "fallback | ${{ inputs.source_repo }}#${{ inputs.source_run_id }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_repo:
+        description: "One monitored project repository"
+        required: true
+        type: choice
+        options:
+          - cruefan94/Flipper-AI-Momentum-
+          - cruefan94/Flipper-AI-Android-Satellite
+      source_run_id:
+        description: "Original GitHub Actions run ID; used to deduplicate"
+        required: true
+        type: string
+      source_sha:
+        description: "Original source commit SHA"
+        required: true
+        type: string
+      source_branch:
+        description: "Original source branch"
+        required: true
+        type: string
+      kind:
+        description: "Allowlisted verification type"
+        required: true
+        type: choice
+        options: [firmware, protocol, android, contract, diagnostic]
+      reason:
+        description: "Automatic policy decision"
+        required: true
+        type: choice
+        options: [two_consecutive_failures, suspected_runner_or_billing]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: "public-ci-fallback-${{ inputs.source_repo }}-${{ inputs.kind }}"
+  cancel-in-progress: false
+
+jobs:
+  describe:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Identify public-runner scope and source run
+        env:
+          SOURCE_REPO: ${{ inputs.source_repo }}
+          SOURCE_ID: ${{ inputs.source_run_id }}
+          SOURCE_SHA: ${{ inputs.source_sha }}
+          SOURCE_BRANCH: ${{ inputs.source_branch }}
+          KIND: ${{ inputs.kind }}
+          REASON: ${{ inputs.reason }}
+        run: |
+          python3 - <<'PY'
+          import os, re
+          repo = os.environ['SOURCE_REPO']
+          if repo not in ('cruefan94/Flipper-AI-Momentum-', 'cruefan94/Flipper-AI-Android-Satellite'):
+              raise SystemExit('Unrecognized source repository')
+          if not re.fullmatch(r'[0-9]+', os.environ['SOURCE_ID']):
+              raise SystemExit('Invalid run ID')
+          if not re.fullmatch(r'[0-9a-fA-F]{40}', os.environ['SOURCE_SHA']):
+              raise SystemExit('Invalid source SHA')
+          print('Public-safe fallback for', repo, 'run', os.environ['SOURCE_ID'])
+          print('Reason:', os.environ['REASON'], '| Test class:', os.environ['KIND'])
+          print('These tests cannot establish real Flipper hardware or Android phone behavior.')
+          PY
+
+  firmware:
+    if: inputs.kind == 'firmware'
+    needs: describe
+    uses: ./.github/workflows/private-momentum-ai-build.yml
+    secrets: inherit
+
+  protocol:
+    if: inputs.kind == 'protocol'
+    needs: describe
+    uses: ./.github/workflows/private-flipper-android-ai1-integration.yml
+    secrets: inherit
+
+  android:
+    if: inputs.kind == 'android'
+    needs: describe
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Checkout only public Android Satellite source
+        uses: actions/checkout@v4
+        with:
+          repository: cruefan94/Flipper-AI-Android-Satellite
+          ref: ${{ inputs.source_repo == 'cruefan94/Flipper-AI-Android-Satellite' && inputs.source_sha || 'develop/android-apk-build' }}
+          path: android-source
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Reproduce Android source preflight and host tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 android-source/android_satellite/tools/preflight.py
+          bash android-source/android_satellite/tests/run_core_tests.sh
+      - name: Compile public Android APK, do not publish user credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          sdkmanager --install "platforms;android-35" "build-tools;35.0.0"
+          gradle -p android-source/android_satellite :app:assembleDebug --no-daemon --stacktrace
+          test -s android-source/android_satellite/app/build/outputs/apk/debug/app-debug.apk
+          sha256sum android-source/android_satellite/app/build/outputs/apk/debug/app-debug.apk
+          echo "Public-source Android APK compiled on fallback runner. NO PHONE/BLE HARDWARE VERIFIED."
+      - name: Clarify source provenance
+        env:
+          SOURCE_REPO: ${{ inputs.source_repo }}
+        run: |
+          if [ "$SOURCE_REPO" = "cruefan94/Flipper-AI-Momentum-" ]; then
+            echo "::warning::Original failure was private Momentum; this is a public Android baseline, not a byte-for-byte rebuild of private firmware."
+          fi
+
+  contract:
+    if: inputs.kind == 'contract'
+    needs: describe
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: cruefan94/Flipper-AI-Android-Satellite
+          ref: main
+          path: android-public
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate public Worker protocol
+        run: node --test android-public/cloudflare_worker/test/*.test.mjs
+      - name: Run public AI1 and infrastructure contract tests
+        run: |
+          python3 -m unittest discover -s tests -p 'test_ai1_contract.py' -v
+          python3 -m unittest discover -s tests -p 'test_public_ci.py' -v
+          echo "PUBLIC CONTRACT TEST ONLY; not an Android/Flipper hardware test."
+
+  diagnostic:
+    if: inputs.kind == 'diagnostic'
+    needs: describe
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify independent public runner and portable fixtures
+        run: |
+          python3 -m unittest discover -s tests -p 'test_public_ci.py' -v
+          python3 -m unittest discover -s tests -p 'test_ai1_contract.py' -v
+          echo "::warning::This checks runner and shared contracts only. No equivalent build exists for the original workflow."
+
