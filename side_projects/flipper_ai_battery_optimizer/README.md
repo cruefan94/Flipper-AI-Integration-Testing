@@ -1,6 +1,6 @@
-# Flipper AI Battery Optimizer — independent side project (v0.2 prototype)
+# Flipper AI Battery Optimizer — PUBLIC SAFE TEST FIXTURE (v0.3)
 
-Standalone Android-compatible Java 8 core, **not installed in Momentum or the Android Satellite app**. This is a portable development/test fixture in an isolated **public testing branch**, ready to move into a new dedicated repository when one is created.
+Standalone Android-compatible Java 8 core, **not installed in Momentum or the Android Satellite app**. This is a public-safe test mirror in the public integration-testing branch. **The authoritative source has moved to the private repository `cruefan94/Flipper-AI-Battery-Optimizer`.** This branch is not an automatic sync of future private work.
 
 ## Purpose
 Use battery telemetry gathered locally on the Flipper Zero to advise its operator about power-saving decisions. AI on Android can eventually explain recommendations, but a deterministic safety policy makes all decisions. **No automatic setting changes, BLE commands, flashing, or Cloudflare uploads exist in this version.**
@@ -35,3 +35,9 @@ done
 5. Only after explicit authorization: optional user-confirmed, allowlisted settings adjustments.
 
 The module is a **side project** until explicit integration approval. The app's existing package ID, signing, BLE and AI behavior must not change from this branch.
+
+## Dedicated repository and test result
+- Source of truth: private `cruefan94/Flipper-AI-Battery-Optimizer`.
+- This branch provides reviewed, public-safe Java and C fixture/test copies; do not add private Momentum firmware files, private logs or credentials.
+- Latest v0.3 Java/C + AI1 host test: [Actions run 43535229257](https://github.com/cruefan94/Flipper-AI-Integration-Testing/actions/runs/43535229257) — **passed**.
+- No actual Flipper hardware validation or battery-life improvement is claimed.
