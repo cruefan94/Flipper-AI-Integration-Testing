@@ -24,9 +24,13 @@ jobs:
           ROOT=side_projects/flipper_ai_battery_optimizer
           mkdir -p /tmp/flipper-ai-battery-classes
           javac -Xlint:all -Werror -d /tmp/flipper-ai-battery-classes "$ROOT"/src/flipperai/battery/*.java "$ROOT"/tests/flipperai/battery/*.java
-          for suite in BatteryOptimizerTest BatteryTelemetryCodecTest BatteryMonitorSessionTest BatteryDischargeStudyTest BatteryRequestCodecTest BatteryReadTransportTest BatteryProtocolRobustnessTest BatteryAiAdvisorTest; do
+          for suite in BatteryOptimizerTest BatteryTelemetryCodecTest BatteryMonitorSessionTest BatteryDischargeStudyTest BatteryRequestCodecTest BatteryReadTransportTest BatteryProtocolRobustnessTest BatteryAiAdvisorTest BatterySimulatorTest; do
             java -cp /tmp/flipper-ai-battery-classes flipperai.battery.$suite
           done
+      - name: Demo synthetic battery profile
+        run: |
+          java -cp /tmp/flipper-ai-battery-classes flipperai.battery.BatterySimulator 10 0 0
+          java -cp /tmp/flipper-ai-battery-classes flipperai.battery.BatterySimulator 50 0 1
       - name: Compile and test standalone C power provider
         run: |
           ROOT=side_projects/flipper_ai_battery_optimizer
