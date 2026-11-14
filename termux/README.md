@@ -15,7 +15,7 @@ pkg update
 pkg install -y python git gh curl
 gh auth login --hostname github.com --git-protocol https --web
 mkdir -p "$HOME/.flipper-ai-termux"
-curl -fLsS "https://raw.githubusercontent.com/cruefan94/Flipper-AI-Integration-Testing/feature/termux-command-bridge-20261113/termux/termux_bridge.py" -o "$HOME/.flipper-ai-termux/termux_bridge.py"
+curl -fLsS "https://raw.githubusercontent.com/cruefan94/Flipper-AI-Integration-Testing/main/termux/termux_bridge.py" -o "$HOME/.flipper-ai-termux/termux_bridge.py"
 python "$HOME/.flipper-ai-termux/termux_bridge.py" watch
 ~~~
 
