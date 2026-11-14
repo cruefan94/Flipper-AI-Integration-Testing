@@ -26,6 +26,7 @@ def _hex_valid(blob):
     except UnicodeDecodeError: return False
     if not lines or len(lines)>65536: return False
     eof=False
+    saw_data=False
     high=0
     for i,line in enumerate(lines):
         if not line.startswith(":") or len(line)<11 or len(line)%2!=1: return False
@@ -35,6 +36,7 @@ def _hex_valid(blob):
         length,hi,lo,typ=rec[:4]
         address=hi*256+lo
         if typ==0:
+            if length>0:saw_data=True
             if high+address+length>32768:return False
         elif typ==1:
             if length!=0 or i!=len(lines)-1:return False
@@ -49,7 +51,7 @@ def _hex_valid(blob):
             high=int.from_bytes(rec[4:6],"big")*16
             if high>32768:return False
         else:return False
-    return eof
+    return eof and saw_data
 
 def inspect(manifest:Path,selected_board:str):
     manifest=Path(manifest)
