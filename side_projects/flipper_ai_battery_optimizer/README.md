@@ -1,4 +1,4 @@
-# Flipper AI Battery Optimizer — independent side project (v0.1)
+# Flipper AI Battery Optimizer — independent side project (v0.2 prototype)
 
 Standalone Android-compatible Java 8 core, **not installed in Momentum or the Android Satellite app**. This is a portable development/test fixture in an isolated **public testing branch**, ready to move into a new dedicated repository when one is created.
 
@@ -10,16 +10,21 @@ Use battery telemetry gathered locally on the Flipper Zero to advise its operato
 - Android source: `cruefan94/Flipper-AI-Android-Satellite`, source branch `feature/android-radio-listening-v238`. Reuse `SatelliteProtocol.java`, `FrameCodec.java`, BLE trust gating, and `InferenceRouter.java` later.
 - Public tests: `cruefan94/Flipper-AI-Integration-Testing`; this side project lives on an unmerged `sideproject/*` branch and is kept isolated from the main CI workflow.
 
-## Stage 1 (included)
+## Stages 1–2 (source prototype)
 - Pure Java recommendation engine for low battery, thermal warnings, charging, and active hardware tasks.
 - Strict read-only decoder for a **proposed, not deployed** AI1 BAT_TELEM message, with validation and malformed-frame tests.
 - Optional discharge trend estimate from local samples (never an exact runtime promise).
+- Guarded telemetry monitoring session: explicit opt-in, trusted BLE epoch, capability handshake, foreground-only polling, no active hardware tasks, bounded 64-sample history, 3–5-minute cadence, and bounded error backoff.
+- Controlled multi-trial discharge comparison using median percentage-points/hour; all comparisons remain provisional.
+- [Future hardware validation plan](docs/HARDWARE_VALIDATION_PLAN.md) with tests required before any battery savings claim.
 - Fast host-only tests with javac/java; Android build and Flipper hardware tests are **not** included.
 
 Run locally:
 ```sh
-javac -d /tmp/flipper-battery-test src/flipperai/battery/BatteryOptimizer.java tests/flipperai/battery/BatteryOptimizerTest.java
-java -cp /tmp/flipper-battery-test flipperai.battery.BatteryOptimizerTest
+javac -Xlint:all -Werror -d /tmp/flipper-battery-test src/flipperai/battery/*.java tests/flipperai/battery/*.java
+for suite in BatteryOptimizerTest BatteryTelemetryCodecTest BatteryMonitorSessionTest BatteryDischargeStudyTest; do
+  java -cp /tmp/flipper-battery-test flipperai.battery.$suite
+done
 ```
 
 ## Roadmap
