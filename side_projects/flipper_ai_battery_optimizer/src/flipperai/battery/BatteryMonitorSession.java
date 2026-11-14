@@ -116,6 +116,24 @@ public final class BatteryMonitorSession {
            nowMs - pendingAtMs >= RESPONSE_TIMEOUT_MS) fail(nowMs);
     }
 
+    /**
+     * Fail a pending request after the transport explicitly rejects a write.
+     * Avoid waiting thirty seconds when the BLE queue never accepted a frame.
+     */
+    public void transportWriteRejected(long nowMs) {
+        if(pending && nowMs >= pendingAtMs) fail(nowMs);
+    }
+
+    /**
+     * A screen/background transition aborts a pending request without treating
+     * a user-navigation event as a BLE error. Late replies are then ignored.
+     */
+    public void cancelPending() {
+        pending = false;
+        pendingRequestId = 0;
+        pendingAtMs = 0;
+    }
+
     private void fail(long atMs) {
         pending = false;
         pendingRequestId = 0;

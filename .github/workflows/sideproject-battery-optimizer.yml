@@ -19,36 +19,28 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - name: Compile independent Java core and host tests
+      - name: Compile and test portable Java core
         run: |
+          ROOT=side_projects/flipper_ai_battery_optimizer
           mkdir -p /tmp/flipper-ai-battery-classes
-          javac -Xlint:all -Werror -d /tmp/flipper-ai-battery-classes \
-            side_projects/flipper_ai_battery_optimizer/src/flipperai/battery/BatteryOptimizer.java \
-            side_projects/flipper_ai_battery_optimizer/src/flipperai/battery/BatteryTelemetryCodec.java \
-            side_projects/flipper_ai_battery_optimizer/src/flipperai/battery/BatteryMonitorSession.java \
-            side_projects/flipper_ai_battery_optimizer/src/flipperai/battery/BatteryDischargeStudy.java \
-            side_projects/flipper_ai_battery_optimizer/tests/flipperai/battery/BatteryOptimizerTest.java \
-            side_projects/flipper_ai_battery_optimizer/tests/flipperai/battery/BatteryTelemetryCodecTest.java \
-            side_projects/flipper_ai_battery_optimizer/tests/flipperai/battery/BatteryMonitorSessionTest.java \
-            side_projects/flipper_ai_battery_optimizer/tests/flipperai/battery/BatteryDischargeStudyTest.java \
-            side_projects/flipper_ai_battery_optimizer/src/flipperai/battery/BatteryRequestCodec.java \
-            side_projects/flipper_ai_battery_optimizer/tests/flipperai/battery/BatteryRequestCodecTest.java
-          java -cp /tmp/flipper-ai-battery-classes flipperai.battery.BatteryOptimizerTest
-          java -cp /tmp/flipper-ai-battery-classes flipperai.battery.BatteryTelemetryCodecTest
-          java -cp /tmp/flipper-ai-battery-classes flipperai.battery.BatteryMonitorSessionTest
-          java -cp /tmp/flipper-ai-battery-classes flipperai.battery.BatteryDischargeStudyTest
-          java -cp /tmp/flipper-ai-battery-classes flipperai.battery.BatteryRequestCodecTest
-      - name: Build and test standalone power telemetry C formatter
+          javac -Xlint:all -Werror -d /tmp/flipper-ai-battery-classes "$ROOT"/src/flipperai/battery/*.java "$ROOT"/tests/flipperai/battery/*.java
+          for suite in BatteryOptimizerTest BatteryTelemetryCodecTest BatteryMonitorSessionTest BatteryDischargeStudyTest BatteryRequestCodecTest BatteryReadTransportTest; do
+            java -cp /tmp/flipper-ai-battery-classes flipperai.battery.$suite
+          done
+      - name: Compile and test standalone C power provider
         run: |
-          cc -std=c11 -Wall -Wextra -Werror -pedantic \
-            side_projects/flipper_ai_battery_optimizer/firmware_adapter/battery_telemetry.c \
-            side_projects/flipper_ai_battery_optimizer/tests/c/test_battery_telemetry.c \
-            -o /tmp/flipper-battery-c-tests
-          /tmp/flipper-battery-c-tests
-          cc -std=c11 -Wall -Wextra -Werror -pedantic \
-            side_projects/flipper_ai_battery_optimizer/firmware_adapter/battery_request.c \
-            side_projects/flipper_ai_battery_optimizer/tests/c/test_battery_request.c \
-            -o /tmp/flipper-battery-request-tests
-          /tmp/flipper-battery-request-tests
-      - name: Run existing public AI1 wire contract tests (regression)
+          ROOT=side_projects/flipper_ai_battery_optimizer
+          cc -std=c11 -Wall -Wextra -Werror -pedantic "$ROOT"/firmware_adapter/battery_telemetry.c "$ROOT"/tests/c/test_battery_telemetry.c -o /tmp/battery_telemetry_test
+          /tmp/battery_telemetry_test
+          cc -std=c11 -Wall -Wextra -Werror -pedantic "$ROOT"/firmware_adapter/battery_request.c "$ROOT"/tests/c/test_battery_request.c -o /tmp/battery_request_test
+          /tmp/battery_request_test
+          cc -std=c11 -Wall -Wextra -Werror -pedantic "$ROOT"/firmware_adapter/battery_service.c "$ROOT"/firmware_adapter/battery_request.c "$ROOT"/firmware_adapter/battery_telemetry.c "$ROOT"/tests/c/test_battery_service.c -o /tmp/battery_service_test
+          /tmp/battery_service_test
+      - name: Run Java-C-Java wire round-trip
+        run: |
+          ROOT=side_projects/flipper_ai_battery_optimizer
+          cc -std=c11 -Wall -Wextra -Werror -pedantic "$ROOT"/firmware_adapter/battery_service.c "$ROOT"/firmware_adapter/battery_request.c "$ROOT"/firmware_adapter/battery_telemetry.c "$ROOT"/tests/c/battery_roundtrip_cli.c -o /tmp/battery_roundtrip
+          set -o pipefail
+          java -cp /tmp/flipper-ai-battery-classes flipperai.battery.BatteryWireRoundTripTest request | /tmp/battery_roundtrip | java -cp /tmp/flipper-ai-battery-classes flipperai.battery.BatteryWireRoundTripTest response
+      - name: Run existing public AI1 contract regression checks
         run: python3 -m unittest discover -s tests -p 'test_ai1_contract.py' -v
