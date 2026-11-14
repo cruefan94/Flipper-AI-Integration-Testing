@@ -18,6 +18,8 @@ public final class BatteryMonitorSession {
     public static final int MAX_HISTORY = 64;
 
     private long connectionEpoch = -1L;
+    // Survives reset/disconnect: an old trusted generation must never reopen.
+    private long highestAcceptedEpoch = -1L;
     private boolean trustedAndCapable;
     private boolean pending;
     private long pendingRequestId;
@@ -41,9 +43,16 @@ public final class BatteryMonitorSession {
             return;
         }
         if(!trustedAndCapable || epoch != connectionEpoch) {
+            // After a disconnect, revocation, or capability loss, require the
+            // host to supply a genuinely NEW trusted transport generation.
+            if(epoch <= highestAcceptedEpoch) {
+                reset();
+                return;
+            }
             reset();
             trustedAndCapable = true;
             connectionEpoch = epoch;
+            highestAcceptedEpoch = epoch;
             nextPollAtMs = nowMs;
         }
     }

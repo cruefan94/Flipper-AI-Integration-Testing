@@ -94,6 +94,12 @@ public final class BatteryMonitorSessionTest {
         session.updateLink(22, false, false, sixth + 4);
         check(!session.isTrustedAndCapable(), "disconnection revokes trust");
         check(!session.beginPoll(7, sixth + 4, true, true, false), "no poll after disconnect");
+        session.updateLink(22, true, true, sixth + 5);
+        check(!session.isTrustedAndCapable(),
+            "retired BLE generation cannot regain trust without new epoch");
+        session.updateLink(23, true, true, sixth + 6);
+        check(session.isTrustedAndCapable(),
+            "fresh BLE epoch may reconnect after trust loss");
         System.out.println("PASS BatteryMonitorSessionTest (" + checks + " assertions; host-only)");
     }
 }

@@ -83,6 +83,12 @@ public final class BatteryReadTransportTest {
         check(!transport.receiveFrame("AI1|BAT_TELEM|1|v1,p=60,c=0,a=0\n",
               second+100001L,4L), "disconnect ignores delayed frame");
         check(transport.history().isEmpty(), "no cross-session cached history");
+        transport.updateTrustedLink(4L, true, true, second+100002L);
+        check(!transport.pollIfDue(2L,second+100002L,true,false,sender),
+              "old BLE epoch rejected even after reconnect");
+        transport.updateTrustedLink(5L, true, true, second+100003L);
+        check(transport.pollIfDue(1L,second+100003L,true,false,sender),
+              "fresh BLE epoch allowed");
         System.out.println("PASS BatteryReadTransportTest (" + assertions + " assertions)");
     }
 }
