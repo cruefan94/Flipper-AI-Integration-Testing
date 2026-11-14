@@ -246,6 +246,62 @@ class NativeFirmwareTests(unittest.TestCase):
         with patch.object(module, "github", side_effect=fake_api):
             self.assertEqual(module.find_successful_run(), (5, 42))
 
+    def test_opt_in_preview_is_exact_allowlisted_successful_run(self):
+        selected = {
+            "id": module.GATT_PREVIEW_RUN_ID,
+            "name": module.GATT_PREVIEW_WORKFLOW,
+            "head_branch": module.GATT_PREVIEW_BRANCH,
+            "status": "completed", "conclusion": "success",
+        }
+        artifacts = {"artifacts": [{
+            "id": 106, "name": module.GATT_PREVIEW_ARTIFACT, "expired": False,
+        }]}
+        with patch.object(module, "github", side_effect=[selected, artifacts]) as api:
+            self.assertEqual(
+                module.find_successful_run(preview=True),
+                (module.GATT_PREVIEW_RUN_ID, 106))
+            self.assertIn(
+                "/actions/runs/" + str(module.GATT_PREVIEW_RUN_ID),
+                api.call_args_list[0].args[0],
+            )
+
+    def test_preview_rejects_unreviewed_run_id_without_network_access(self):
+        with patch.object(module, "github") as api:
+            with self.assertRaisesRegex(module.DeliveryError, "reviewed GATT"):
+                module.find_successful_run(8888, preview=True)
+            api.assert_not_called()
+
+    def test_preview_rejects_main_firmware_and_expired_preview(self):
+        selected = {
+            "id": module.GATT_PREVIEW_RUN_ID,
+            "name": module.WORKFLOW_NAME,
+            "head_branch": "main",
+            "status": "completed", "conclusion": "success",
+        }
+        with patch.object(module, "github", return_value=selected):
+            with self.assertRaisesRegex(module.DeliveryError, "not a successful"):
+                module.find_successful_run(preview=True)
+        selected["name"] = module.GATT_PREVIEW_WORKFLOW
+        selected["head_branch"] = module.GATT_PREVIEW_BRANCH
+        with patch.object(module, "github", side_effect=[
+            selected,
+            {"artifacts": [{
+                "id": 106, "name": module.GATT_PREVIEW_ARTIFACT, "expired": True
+            }]},
+        ]):
+            with self.assertRaisesRegex(module.DeliveryError, "non-expired"):
+                module.find_successful_run(preview=True)
+
+    def test_preview_source_identity_is_checked_before_write(self):
+        source = (HERE / "firmware_to_phone.py").read_text()
+        self.assertIn("source != GATT_PREVIEW_SOURCE_SHA", source)
+        self.assertLess(
+            source.index("source != GATT_PREVIEW_SOURCE_SHA"),
+            source.index("saved = save_candidate(work, filename, firmware)"),
+        )
+        self.assertIn('parser.add_argument("--gatt-preview"', source)
+        self.assertIn("GATT_PREVIEW_ARTIFACT if args.gatt_preview else ARTIFACT_NAME", source)
+
     def test_expired_artifact_rejected(self):
         with patch.object(module, "github", side_effect=[
             {"id": 5, "name": module.WORKFLOW_NAME, "status": "completed",
