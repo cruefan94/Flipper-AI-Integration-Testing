@@ -35,5 +35,12 @@ jobs:
           java -cp /tmp/flipper-ai-battery-classes flipperai.battery.BatteryTelemetryCodecTest
           java -cp /tmp/flipper-ai-battery-classes flipperai.battery.BatteryMonitorSessionTest
           java -cp /tmp/flipper-ai-battery-classes flipperai.battery.BatteryDischargeStudyTest
+      - name: Build and test standalone power telemetry C formatter
+        run: |
+          cc -std=c11 -Wall -Wextra -Werror -pedantic \
+            side_projects/flipper_ai_battery_optimizer/firmware_adapter/battery_telemetry.c \
+            side_projects/flipper_ai_battery_optimizer/tests/c/test_battery_telemetry.c \
+            -o /tmp/flipper-battery-c-tests
+          /tmp/flipper-battery-c-tests
       - name: Run existing public AI1 wire contract tests (regression)
         run: python3 -m unittest discover -s tests -p 'test_ai1_contract.py' -v
