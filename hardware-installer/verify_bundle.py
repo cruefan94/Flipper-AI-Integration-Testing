@@ -127,14 +127,23 @@ def stage(manifest:Path,selected_board:str,destination:Path,approve:bool=False):
     # Validate all images and targets before staging. Never trigger a flash.
     written=[]
     try:
-        for name,_,_ in images:
+        for name,_,digest in images:
             source=Path(manifest).parent/name
             target=destination/name
+            # Track target immediately after exclusive creation. A failed write
+            # or source read must not strand a partial image on the SD card.
             with source.open("rb") as src, target.open("xb") as dst:
+                written.append(target)
                 shutil.copyfileobj(src,dst)
-            written.append(target)
+                dst.flush()
+                os.fsync(dst.fileno())
+            # A removable SD destination can fail or silently corrupt data.
+            # Rehash the copied file before reporting it staged.
+            copied=hashlib.sha256(target.read_bytes()).hexdigest()
+            if copied!=digest:
+                raise BundleError("Staged SD image failed post-copy SHA256 check")
         return written
-    except OSError:
+    except (OSError,BundleError):
         for entry in written:entry.unlink(missing_ok=True)
         raise
 
