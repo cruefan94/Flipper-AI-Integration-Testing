@@ -228,11 +228,45 @@ def save_candidate(destination: Path, filename: str, data: bytes, *, private: bo
     return target
 
 
+def decrypt_with_visible_passphrase(encrypted: Path, decrypted: Path) -> None:
+    """Opt-in visible, local-only input; never place passphrase in argv or GitHub."""
+    if not sys.stdin.isatty():
+        raise DeliveryError("Visible entry requires an interactive local Termux terminal")
+    print("WARNING: your passphrase will be visible on screen and in terminal scrollback.")
+    print("Do not take screenshots, screen-share, or run this via the GitHub issue bridge.")
+    try:
+        passphrase = input("Artifact passphrase (VISIBLE): ")
+    except (EOFError, KeyboardInterrupt) as exc:
+        raise DeliveryError("Visible passphrase entry canceled") from exc
+    if not passphrase or "\n" in passphrase or "\r" in passphrase:
+        raise DeliveryError("Empty or invalid passphrase")
+    command = [
+        "openssl", "enc", "-d", "-aes-256-cbc", "-pbkdf2", "-iter", "250000",
+        "-salt", "-in", str(encrypted), "-out", str(decrypted), "-pass", "stdin",
+    ]
+    try:
+        result = subprocess.run(
+            command, input=passphrase + "\n", text=True, capture_output=True,
+            timeout=90, check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise DeliveryError("OpenSSL decryption failed to start or timed out") from exc
+    finally:
+        passphrase = None
+    if result.returncode:
+        raise DeliveryError(
+            "Decryption failed. Check the saved artifact passphrase; "
+            "GitHub login password is not the firmware passphrase."
+        )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--run-id", type=int, help="Verified successful main-branch run; default newest")
     parser.add_argument("--share-downloads", action="store_true",
                         help="Copy verified .tgz into Android Downloads (requires Termux storage permission)")
+    parser.add_argument("--show-passphrase", action="store_true",
+                        help="Show password characters while typing locally (less secure; never use over remote bridge)")
     args = parser.parse_args()
     print("Experimental AI Momentum F7 firmware. NOT hardware tested. No flashing will be performed.")
     print("Download requires authenticated GitHub CLI. Decryption happens only on this phone.")
@@ -253,8 +287,11 @@ def main() -> int:
             decrypted = temp / "verified-delivery.tar.gz"
             print("OpenSSL will prompt for your existing private artifact passphrase.")
             print("Never paste the passphrase into GitHub, the Termux issue bridge, or chat.")
-            run(["openssl", "enc", "-d", "-aes-256-cbc", "-pbkdf2", "-iter", "250000",
-                 "-salt", "-in", str(encrypted), "-out", str(decrypted)], interactive=True)
+            if args.show_passphrase:
+                decrypt_with_visible_passphrase(encrypted, decrypted)
+            else:
+                run(["openssl", "enc", "-d", "-aes-256-cbc", "-pbkdf2", "-iter", "250000",
+                     "-salt", "-in", str(encrypted), "-out", str(decrypted)], interactive=True)
             filename, firmware, source = verify_delivery(decrypted)
             saved = save_candidate(work, filename, firmware)
             print(f"Validated source {source}; firmware SHA256 {sha256(firmware)}.")
