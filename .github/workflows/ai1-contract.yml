@@ -15,6 +15,15 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
+      - name: Checkout public Android Satellite source
+        uses: actions/checkout@v4
+        with:
+          repository: cruefan94/Flipper-AI-Android-Satellite
+          ref: fix/android-chat-continuity-secure-cloud-settings-v241
+          path: android-source
+          persist-credentials: false
+      - name: Verify Android AI GATT UUID parity with public contract
+        run: python3 tests/check_android_ai1_parity.py android-source/android_satellite/app/src/main/java/com/flipperai/satellite/BleSatellite.java
       - name: Verify public AI1 protocol fixtures and virtual sessions
         run: python3 -m unittest discover -s tests -p 'test_*ai1*.py' -v
       - name: Verify virtual session adversarial cases
