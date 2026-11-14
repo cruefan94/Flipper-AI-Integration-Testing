@@ -21,7 +21,7 @@ This is a **host-side simulator and protocol test gate**, NOT an emulator of Fli
 No claim of complete Flipper emulation, accurate power draw, hardware BLE radio behavior, bootloader compatibility or guaranteed safe flashing. A passing CI run is a build-quality gate only.
 
 ## User baseline
-Current installed Momentum: mntm-012, 2025-12-31, commit e1784e74 (photo reported). Official Flipper Mobile App pairs over Bluetooth. User currently has no computer for recovery.
+Current installed Momentum previously reported as mntm-012 (official release dated 2025-12-31, commit e1784e74), and the official Flipper Mobile App was reported paired over Bluetooth. The owner now has a Raspberry Pi 4B/Pironman with qFlipper installed and a display, keyboard and mouse; its USB/DFU recovery path has not yet been independently tested. Confirm recovery function rather than treating the earlier 'no computer' note as current.
 
 ## Current verified artifact
 Run https://github.com/cruefan94/Flipper-AI-Integration-Testing/actions/runs/43544527859
