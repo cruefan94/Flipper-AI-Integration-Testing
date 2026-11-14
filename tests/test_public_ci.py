@@ -18,6 +18,18 @@ class PublicCiTests(unittest.TestCase):
         self.assertEqual(decoded, packet)
         self.assertIsInstance(decoded["payload"], dict)
 
+    def test_private_source_and_credentials_not_published(self):
+        # Public CI must remain a contract-only project, never a firmware mirror.
+        forbidden_dirs = ("flipper_app", "esp32s2", "cloudflare_worker", "momentum")
+        for name in forbidden_dirs:
+            self.assertFalse((ROOT / name).exists(), f"Private project directory leaked: {name}")
+        for path in ROOT.rglob("*"):
+            if not path.is_file() or ".git" in path.parts:
+                continue
+            self.assertNotIn(path.name.lower(), (".env", "id_rsa", "id_ed25519"))
+            self.assertFalse(path.suffix.lower() in (".pem", ".p12", ".pfx", ".key"),
+                             f"Possible private key committed: {path.relative_to(ROOT)}")
+
     def test_infrastructure_is_not_firmware_validation(self):
         workflow = (ROOT / ".github/workflows/public-ci-smoke.yml").read_text(encoding="utf-8")
         self.assertIn("workflow_dispatch:", workflow)
