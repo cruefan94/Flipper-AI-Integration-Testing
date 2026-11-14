@@ -107,6 +107,29 @@ class InstallerPreflight(unittest.TestCase):
         with self.assertRaisesRegex(BundleError,"no installer backend"):
             inspect(m,"arduino_uno_r4")
 
+    def test_partial_sd_write_rolls_back_incomplete_new_file(self):
+        from unittest.mock import patch
+        m,_=self.make_bundle()
+        def interrupt(source,destination):
+            destination.write(b"partial-image")
+            raise OSError("simulated SD disconnect")
+        with patch("verify_bundle.shutil.copyfileobj",side_effect=interrupt):
+            with self.assertRaisesRegex(OSError,"SD disconnect"):
+                stage(m,"esp32_wroom32_devkit",self.output,approve=True)
+        self.assertEqual(list(self.output.iterdir()),[],
+                         "A failed copy must never leave a bootable-looking partial .bin")
+
+    def test_sd_copy_mismatch_is_rejected_and_removed(self):
+        from unittest.mock import patch
+        m,_=self.make_bundle()
+        def corrupt(source,destination):
+            destination.write(b"corrupted-output")
+        with patch("verify_bundle.shutil.copyfileobj",side_effect=corrupt):
+            with self.assertRaisesRegex(BundleError,"post-copy SHA256"):
+                stage(m,"esp32_wroom32_devkit",self.output,approve=True)
+        self.assertEqual(list(self.output.iterdir()),[],
+                         "Corrupted staged files must be removed")
+
     def test_checksum_not_authentication_claim(self):
         s=(Path(__file__).resolve().parents[1]/"verify_bundle.py").read_text()
         self.assertIn("SHA256 checks integrity",s)
