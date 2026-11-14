@@ -40,10 +40,23 @@ class InstallerPreflight(unittest.TestCase):
             stage(m,"esp32_wroom32_devkit",self.output)
         self.assertEqual(list(self.output.iterdir()),[])
         copied=stage(m,"esp32_wroom32_devkit",self.output,approve=True)
-        self.assertEqual(len(copied),1)
+        self.assertEqual(len(copied),2)
         self.assertEqual(copied[0].read_bytes(),b"image-data-for-testing")
+        plan=(self.output/"flipper-ai-esp32-plan.txt").read_text()
+        self.assertIn("FZHW1|BOARD=esp32_wroom32_devkit|CHIP=esp32|VER=dev-1|HW_UNVERIFIED=1\\n",plan)
+        self.assertIn("IMG|firmware.bin|0x10000|",plan)
+        self.assertIn("NOTICE|SD_COPY_ONLY|ESP_FLASHER_APPROVAL_REQUIRED",plan)
         with self.assertRaisesRegex(BundleError,"overwriting"):
             stage(m,"esp32_wroom32_devkit",self.output,approve=True)
+
+    def test_existing_plan_blocks_staging_before_any_image_copy(self):
+        m,_=self.make_bundle()
+        plan=self.output/"flipper-ai-esp32-plan.txt"
+        plan.write_text("Existing hardware plan: leave unchanged")
+        with self.assertRaisesRegex(BundleError,"overwriting"):
+            stage(m,"esp32_wroom32_devkit",self.output,approve=True)
+        self.assertEqual(plan.read_text(),"Existing hardware plan: leave unchanged")
+        self.assertFalse((self.output/"firmware.bin").exists())
 
     def test_cross_flash_chip_and_board_rejected(self):
         m,doc=self.make_bundle()
