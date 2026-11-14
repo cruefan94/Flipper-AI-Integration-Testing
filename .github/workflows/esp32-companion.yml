@@ -1,0 +1,65 @@
+name: ESP32 Expansion isolated source checks
+on:
+  push:
+    paths:
+      - 'esp32-expansion/**'
+      - '.github/workflows/esp32-companion.yml'
+  pull_request:
+    paths:
+      - 'esp32-expansion/**'
+      - '.github/workflows/esp32-companion.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  protocol-host:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile and execute bounded protocol parser tests
+        run: |
+          set -euo pipefail
+          g++ -std=c++17 -Wall -Wextra -Werror -Iesp32-expansion/firmware/src \
+            esp32-expansion/firmware/src/protocol.cpp \
+            esp32-expansion/tests/test_protocol.cpp -o /tmp/fz1-protocol-test
+          /tmp/fz1-protocol-test
+  esp32-reference:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install PlatformIO
+        run: python3 -m pip install --user platformio
+      - name: Build classic ESP32 DevKit example (NOT board validated)
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.local/bin:$PATH"
+          pio run -d esp32-expansion/firmware -e esp32dev
+      - uses: actions/upload-artifact@v4
+        with:
+          name: esp32dev-reference-firmware-NOT-FLASH-VERIFIED
+          path: |
+            esp32-expansion/firmware/.pio/build/esp32dev/firmware.bin
+            esp32-expansion/firmware/.pio/build/esp32dev/bootloader.bin
+            esp32-expansion/firmware/.pio/build/esp32dev/partitions.bin
+          if-no-files-found: error
+          retention-days: 7
+  flipper-app:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install upstream Flipper build tool
+        run: python3 -m pip install --user ufbt
+      - name: Build ESP32 Manager FAP against official SDK (NOT Momentum validated)
+        working-directory: esp32-expansion/flipper
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.local/bin:$PATH"
+          ufbt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: esp32-manager-upstream-FAP-NOT-MOMENTUM-VERIFIED
+          path: esp32-expansion/flipper/dist/**/*.fap
+          if-no-files-found: error
+          retention-days: 7
