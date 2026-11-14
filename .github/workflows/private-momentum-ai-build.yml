@@ -48,9 +48,11 @@ jobs:
           export HOME="$RUNNER_TEMP"
           mv "$RUNNER_TEMP/private.netrc" "$HOME/.netrc"
           trap 'rm -f "$HOME/.netrc"' EXIT
-          git -c http.extraheader= clone --quiet --depth 1 --branch feature/momentum-ble-hardware-status-v62 \
+          git -c http.extraheader= clone --quiet --depth 1 --branch feature/flash-test-platform-v01 \
             https://github.com/cruefan94/Flipper-AI-Momentum-.git "$RUNNER_TEMP/private-ai"
           test -f "$RUNNER_TEMP/private-ai/momentum_overlay/install_source_overlay.py"
+      - name: Identify private firmware source revision
+        run: git -C "$RUNNER_TEMP/private-ai" rev-parse HEAD
       - name: Clone pinned upstream Momentum
         run: |
           set -euo pipefail
@@ -71,7 +73,7 @@ jobs:
           python3 momentum_overlay/install_trusted_gap_hook.py "$RUNNER_TEMP/momentum-fw"
           python3 momentum_overlay/install_bt_ai_api.py "$RUNNER_TEMP/momentum-fw"
           python3 momentum_overlay/mark_internal_api.py "$RUNNER_TEMP/momentum-fw/targets/f7/api_symbols.csv"
-          python3 scripts/patch_app.py "$RUNNER_TEMP/momentum-fw" --mode internal --autostart yes --ble-experimental
+          python3 scripts/patch_app.py "$RUNNER_TEMP/momentum-fw" --mode internal --autostart no --ble-experimental
       - name: Normalize upstream Git version metadata parser for CI
         run: |
           set -euo pipefail
@@ -165,7 +167,7 @@ jobs:
       - name: Upload encrypted firmware package only
         uses: actions/upload-artifact@v4
         with:
-          name: encrypted-flipper-ai-hardware-status-v62-UNTESTED
+          name: encrypted-flipper-ai-flash-candidate-UNTESTED
           path: ${{ runner.temp }}/flipper-ai-updater.tar.gz.enc
           if-no-files-found: error
           retention-days: 7
