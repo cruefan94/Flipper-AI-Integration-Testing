@@ -77,3 +77,6 @@ Phase 3: status/capability-based integration with main Flipper AI using a review
 Phase 4: optional I2S audio, sensors, OTA/USB expansion only after safety and device testing.
 
 Do not imply this code is already merged, flashed, functional on user hardware, or available within the live Flipper AI menu.
+## Arduino-compatible sensor modules
+
+The precompiled ESP32 reference firmware now contains read-only profiles for analog GPIO34, digital GPIO27, I2C GPIO21/22, BME280 and DHT22. Flipper Manager has corresponding menu actions. Read [the sensor hardware guide](SENSOR_MODULES.md) for safe 3.3V wiring and limitations. A public CI SD-card staging bundle can be produced for review; this does **not** modify the owner's installed Momentum firmware.
