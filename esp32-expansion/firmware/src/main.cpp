@@ -7,6 +7,9 @@
 #ifndef FLIPPER_ESP_LED_PIN
 #define FLIPPER_ESP_LED_PIN -1
 #endif
+#ifndef FLIPPER_ESP_FIRMWARE_VERSION
+#define FLIPPER_ESP_FIRMWARE_VERSION "0.1.0-dev"
+#endif
 
 // UART2 GPIO16 RX / GPIO17 TX are exclusively for Flipper commands.
 // UART0 GPIO3 RX / GPIO1 TX are reserved for flashing and USB console.
@@ -51,8 +54,9 @@ static void execute(fz1::Command cmd) {
         break;
     case fz1::Command::Info: {
         String model = ESP.getChipModel();
-        Serial2.printf("FZ1|OK|CHIP=%s,REV=%d,CORES=%d\n",
-                      model.c_str(), (int)ESP.getChipRevision(), (int)ESP.getChipCores());
+        Serial2.printf("FZ1|OK|CHIP=%s,REV=%d,CORES=%d,FW=%s\n",
+                      model.c_str(), (int)ESP.getChipRevision(),
+                      (int)ESP.getChipCores(), FLIPPER_ESP_FIRMWARE_VERSION);
         break;
     }
     case fz1::Command::Caps:

@@ -14,7 +14,9 @@
 enum { EspViewMenu, EspViewText };
 enum {
     EspDetect, EspInfo, EspCaps, EspStatus, EspPassiveScan,
-    EspLedOn, EspLedOff, EspFlashHelp, EspAbout
+    EspLedOn, EspLedOff, EspFlashHelp,
+    EspWatchBoards, EspInstallerHelp, EspBoardDevboard, EspBoardEsp32, EspBoardUnoR3,
+    EspBoardUnoR4, EspAbout
 };
 #define ESP_RX_LINE 192
 
@@ -31,6 +33,10 @@ typedef struct {
     bool discarding;
     bool waiting;
     uint16_t ticks;
+    bool auto_watch;
+    bool watch_probe_pending;
+    uint16_t watch_ticks;
+    uint16_t watch_probe_ticks;
 } EspManager;
 
 static uint32_t esp_previous_menu(void* context) {
@@ -56,6 +62,9 @@ static void esp_send(EspManager* app, const char* command) {
         esp_show(app, "LPUART busy or unavailable.\nExit Flipper AI and other UART apps first.");
         return;
     }
+    /* A manual command supersedes an in-flight background read-only probe. */
+    app->watch_probe_pending = false;
+    app->watch_probe_ticks = 0;
     app->waiting = true;
     app->ticks = 0;
     app->used = 0;
@@ -66,6 +75,30 @@ static void esp_send(EspManager* app, const char* command) {
     furi_hal_serial_tx(app->serial, (const uint8_t*)"\n", 1);
 }
 static void esp_line(EspManager* app, const char* line) {
+    if(app->watch_probe_pending && !app->waiting && strncmp(line, "FZ1|OK|CHIP=", 12) == 0) {
+        app->watch_probe_pending = false;
+        /* FZ1 protocol replies are hints from an already installed companion,
+         * not authenticated ESP ROM chip IDs. Never auto-select a flash image. */
+        if(strncmp(line + 12, "ESP32,", 6) == 0) {
+            esp_show(app, "HARDWARE FOUND (FZ1 RESPONSE)\n"
+                "ESP32-classic companion detected on UART2.\n"
+                "Profile: ESP-WROOM-32 / ESP32 DevKit.\n"
+                "Already running Flipper AI companion firmware.\n"
+                "Installer can offer a verified ESP32-only firmware candidate.\n"
+                "FLASHING REQUIRES APPROVAL and ESP Flasher.\n"
+                "No firmware has been changed.");
+        } else if(strncmp(line + 12, "ESP32-S2,", 9) == 0) {
+            esp_show(app, "HARDWARE FOUND (FZ1 RESPONSE)\n"
+                "ESP32-S2 companion replied.\n"
+                "Do not infer official Wi-Fi Devboard identity.\n"
+                "Keep stock debug/Black Magic firmware unless deliberately switching.\n"
+                "Only an approved ESP32-S2 package may be used.");
+        } else {
+            esp_show(app, "Companion replied but chip is not in the approved installer profiles.\n"
+                "No firmware target selected; no flash initiated.");
+        }
+        return;
+    }
     if(!app->waiting || strncmp(line, "FZ1|", 4) != 0) return;
     if(strcmp(line, "FZ1|END") == 0) {
         app->waiting = false;
@@ -105,6 +138,19 @@ static void esp_tick(void* context) {
             else { app->used = 0; app->discarding = true; }
         }
     }
+    if(app->auto_watch && app->serial && !app->waiting) {
+        /* Monitoring is opt-in. UART has no reliable physical hot-plug signal.
+         * Never probe other UART owners or send programming/reset commands. */
+        if(app->watch_probe_pending) {
+            if(++app->watch_probe_ticks > 25) app->watch_probe_pending = false;
+        } else if(++app->watch_ticks > 50) {
+            const char* probe = "FZ1|INFO\n";
+            furi_hal_serial_tx(app->serial, (const uint8_t*)probe, strlen(probe));
+            app->watch_probe_pending = true;
+            app->watch_probe_ticks = 0;
+            app->watch_ticks = 0;
+        }
+    }
     if(app->waiting && ++app->ticks > 200) {
         app->waiting = false;
         furi_string_cat_str(app->text, "Timed out.\nCheck wiring, power and firmware.\n");
@@ -121,6 +167,63 @@ static void esp_menu(void* context, uint32_t index) {
     case EspPassiveScan: esp_send(app, "FZ1|WIFI_SCAN"); break;
     case EspLedOn: esp_send(app, "FZ1|LED|ON"); break;
     case EspLedOff: esp_send(app, "FZ1|LED|OFF"); break;
+    case EspWatchBoards:
+        app->auto_watch = !app->auto_watch;
+        app->watch_ticks = 0;
+        app->watch_probe_ticks = 0;
+        app->watch_probe_pending = false;
+        esp_show(app, app->auto_watch
+            ? "AUTO-DETECT IS ON (APP MUST STAY OPEN)\n"
+              "Checks for an installed FZ1 companion on UART2 every ~5 seconds.\n"
+              "A blank board or an Arduino Uno cannot be safely identified this way.\n"
+              "Detection offers a match; it NEVER flashes automatically.\n"
+              "Use Hardware installer guide for wiring and approved updates."
+            : "AUTO-DETECT IS OFF.\n"
+              "No background polling or automatic flashing.\n"
+              "Existing firmware and hardware are unchanged.");
+        break;
+    case EspInstallerHelp:
+        esp_show(app, "HARDWARE INSTALLER - PREFLIGHT\n"
+            "1. Detect board (if running FZ1) or select exact model.\n"
+            "2. Verify 3.3V UART or isolate 5V Uno with level shifting.\n"
+            "3. Match chip, flash layout, signed/trusted source + SHA256.\n"
+            "4. Preview actions; approve EVERY firmware flash.\n"
+            "5. Use compatible Flipper ESP Flasher or external supported host.\n"
+            "6. Read back/verify and keep recovery/backup.\n"
+            "This Manager does not run ESP Flasher or flash other boards.");
+        break;
+    case EspBoardDevboard:
+        esp_show(app, "OFFICIAL FLIPPER WI-FI DEVBOARD\n"
+            "ESP32-S2-WROVER (not ESP32 classic).\n"
+            "Default Black Magic/debug firmware must be preserved unless you approve a change.\n"
+            "Official host update: ufbt devboard_flash with board in BOOT mode.\n"
+            "Flipper ESP Flasher may support S2 with board-specific verified images.\n"
+            "Never load an ESP32-WROOM-32 image onto this board.");
+        break;
+    case EspBoardEsp32:
+        esp_show(app, "ESP-WROOM-32 DEVKIT / 38-PIN\n"
+            "Prototype board profile: classic ESP32; exact flash size not verified.\n"
+            "Manager: UART2 RX GPIO16 / TX GPIO17, Flipper 15/16 and common GND.\n"
+            "Flashing: separate UART0, Flipper USART pins 13/14, manual BOOT/EN.\n"
+            "Use an ESP32 matched/verified bundle with ESP Flasher.\n"
+            "Do not connect ESP USB-UART and Flipper TX drivers in conflict.");
+        break;
+    case EspBoardUnoR3:
+        esp_show(app, "ARDUINO UNO R3-STYLE\n"
+            "ATmega328P family, 5V digital I/O.\n"
+            "DO NOT CONNECT 5V UART DIRECTLY TO FLIPPER GPIO.\n"
+            "Preferred first updater: Raspberry Pi / PC with USB + avrdude.\n"
+            "USB bootloader/programmer must be verified; clones vary.\n"
+            "Flipper-only Uno programmer needs separate 3.3V/5V level shifting\n"
+            "and an authored/verified AVR ISP backend. Not available yet.");
+        break;
+    case EspBoardUnoR4:
+        esp_show(app, "ARDUINO UNO R4 (MINIMA / WIFI)\n"
+            "Renesas RA4M1; NOT the Uno R3 ATmega328P.\n"
+            "R3 .hex and AVR upload tools are not valid for this board.\n"
+            "Use the correct Arduino board package via USB host.\n"
+            "No Flipper-side automatic programmer is implemented.");
+        break;
     case EspFlashHelp:
         esp_show(app,
             "FLASHING IS SEPARATE.\n"
@@ -164,6 +267,12 @@ int32_t esp_manager_app(void* p) {
     submenu_add_item(app->submenu, "Passive Wi-Fi scan", EspPassiveScan, esp_menu, app);
     submenu_add_item(app->submenu, "LED on (optional)", EspLedOn, esp_menu, app);
     submenu_add_item(app->submenu, "LED off (optional)", EspLedOff, esp_menu, app);
+    submenu_add_item(app->submenu, "Hardware installer guide", EspInstallerHelp, esp_menu, app);
+    submenu_add_item(app->submenu, "Auto-detect attached (toggle)", EspWatchBoards, esp_menu, app);
+    submenu_add_item(app->submenu, "Profile: Wi-Fi Devboard S2", EspBoardDevboard, esp_menu, app);
+    submenu_add_item(app->submenu, "Profile: ESP32-WROOM", EspBoardEsp32, esp_menu, app);
+    submenu_add_item(app->submenu, "Profile: Arduino Uno R3", EspBoardUnoR3, esp_menu, app);
+    submenu_add_item(app->submenu, "Profile: Arduino Uno R4", EspBoardUnoR4, esp_menu, app);
     submenu_add_item(app->submenu, "How to flash firmware", EspFlashHelp, esp_menu, app);
     submenu_add_item(app->submenu, "About", EspAbout, esp_menu, app);
     view_set_previous_callback(submenu_get_view(app->submenu), esp_previous_exit);

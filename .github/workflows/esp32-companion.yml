@@ -3,10 +3,12 @@ on:
   push:
     paths:
       - 'esp32-expansion/**'
+      - 'hardware-installer/**'
       - '.github/workflows/esp32-companion.yml'
   pull_request:
     paths:
       - 'esp32-expansion/**'
+      - 'hardware-installer/**'
       - '.github/workflows/esp32-companion.yml'
   workflow_dispatch:
 permissions:
@@ -35,13 +37,22 @@ jobs:
           set -euo pipefail
           export PATH="$HOME/.local/bin:$PATH"
           pio run -d esp32-expansion/firmware -e esp32dev
+      - name: Generate hash-checked board-specific reference bundle (not hardware verified)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 hardware-installer/build_esp32_reference_bundle.py \
+            --build esp32-expansion/firmware/.pio/build/esp32dev \
+            --out esp32-reference-bundle \
+            --version 0.1.0-dev \
+            --source-revision "$GITHUB_SHA"
+          python3 hardware-installer/verify_bundle.py esp32-reference-bundle/manifest.json \
+            --board esp32_wroom32_devkit
+          test -s esp32-reference-bundle/READ_ME_BEFORE_FLASHING.txt
       - uses: actions/upload-artifact@v4
         with:
-          name: esp32dev-reference-firmware-NOT-FLASH-VERIFIED
-          path: |
-            esp32-expansion/firmware/.pio/build/esp32dev/firmware.bin
-            esp32-expansion/firmware/.pio/build/esp32dev/bootloader.bin
-            esp32-expansion/firmware/.pio/build/esp32dev/partitions.bin
+          name: esp32-wroom32-reference-manifest-bin-BUNDLE-UNTESTED
+          path: esp32-reference-bundle/
           if-no-files-found: error
           retention-days: 7
   flipper-app:

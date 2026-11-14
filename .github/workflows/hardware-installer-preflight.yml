@@ -1,0 +1,35 @@
+name: Expansion hardware bundle integrity and user-approval gates
+on:
+  push:
+    paths:
+      - 'hardware-installer/**'
+      - 'esp32-expansion/**'
+      - '.github/workflows/hardware-installer-preflight.yml'
+  pull_request:
+    paths:
+      - 'hardware-installer/**'
+      - 'esp32-expansion/**'
+      - '.github/workflows/hardware-installer-preflight.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  board-preflight:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Syntax and safe firmware image preflight tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile hardware-installer/board_profiles.py hardware-installer/verify_bundle.py
+          python3 -m unittest discover -s hardware-installer/tests -p 'test_*.py' -v
+      - name: Compile bounded FZ1 UART protocol regression tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          g++ -std=c++17 -Wall -Wextra -Werror \
+            esp32-expansion/firmware/src/protocol.cpp \
+            esp32-expansion/tests/test_protocol.cpp -o /tmp/flipper-esp32-fz1
+          /tmp/flipper-esp32-fz1
