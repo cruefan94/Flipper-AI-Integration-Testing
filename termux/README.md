@@ -84,6 +84,16 @@ Output filtering is best-effort only: do not run commands that print secrets or 
 4. Approve harmless pwd, verify correct response, and check restart behavior.
 5. Check output for secrets before enabling any other development operations.
 
+### Optional visible passphrase entry
+
+The normal OpenSSL prompt hides passphrase characters. To **show the text as you type** instead, run the phone helper with `--show-passphrase` (you can combine it with `--share-downloads`). The helper reads passphrase text locally from the interactive Termux terminal and supplies it to OpenSSL through standard input, **not** command arguments, environment variables, GitHub Issues or logs.
+
+**Security tradeoff:** visible characters can remain in the screen/terminal scrollback. Avoid screenshots, screen recording, shared displays or screen mirroring, and clear the terminal after the attempt. This option deliberately refuses noninteractive execution through the GitHub command queue. `bad decrypt` despite visible accurate entry means the input does not match the GitHub artifact encryption secret; GitHub cannot show the old secret. Reset `FLIPPER_ARTIFACT_PASSPHRASE` and rerun firmware build rather than guessing indefinitely.
+
+~~~sh
+python "$HOME/.flipper-ai-termux/firmware_to_phone.py" --show-passphrase --share-downloads
+~~~
+
 ## Prepare verified firmware on Android (no automatic flashing)
 
 The opt-in `firmware_to_phone.py` helper downloads the **latest successful custom Momentum AI firmware** artifact from GitHub, prompts locally for the existing firmware-artifact passphrase, checks the native F7 update archive and its file hashes, then saves the original `flipper-z-f7-update-*.tgz`. Nothing is uploaded from the phone and **nothing is flashed**.
