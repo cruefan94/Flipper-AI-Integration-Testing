@@ -22,5 +22,7 @@ jobs:
           python3 --version
       - name: Public-safe contract smoke tests
         run: python3 -m unittest discover -s tests -p 'test_public_ci.py' -v
+      - name: Automatic failover policy regression tests (offline, no dispatch)
+        run: python3 -m unittest discover -s tests -p 'test_ci_failover.py' -v
       - name: Confirm no firmware build performed
         run: echo "Infrastructure smoke test only; Momentum firmware, Flipper FAP, and Android APK are NOT built or verified."
