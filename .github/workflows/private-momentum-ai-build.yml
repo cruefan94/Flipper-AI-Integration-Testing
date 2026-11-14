@@ -1,3 +1,4 @@
+# Re-run after private Python string parser fix; all artifacts encrypted.
 name: Private Momentum AI GATT registration preview compile on public runner
 on:
   workflow_call:
