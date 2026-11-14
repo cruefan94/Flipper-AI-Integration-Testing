@@ -126,17 +126,17 @@ static void esp_menu(void* context, uint32_t index) {
             "FLASHING IS SEPARATE.\n"
             "Use compatible ESP Flasher from Apps > GPIO.\n"
             "Verify board model and matching .bin first.\n"
-            "Move TX/RX wires to ESP RX0/TX0 first.\n"
+            "Program: FZ 13 TX -> ESP RX0.\n"\n            "FZ 14 RX <- ESP TX0.\n"
             "Use manual BOOT/EN as instructed.\n"
-            "Reconnect RX2/TX2 to use Manager.\n"
+            "For Manager use FZ 15/16 RX2/TX2.\n"
             "Never flash guessed images.");
         break;
     case EspAbout:
         esp_show(app,
             "ESP32 Manager v0.1 SOURCE PROTOTYPE\n"
             "FZ1 115200 8N1 LPUART.\n"
-            "Flipper 15 TX -> ESP RX2 (GPIO16)\n"
-            "Flipper 16 RX <- ESP TX2 (GPIO17)\n"
+            "Manager: FZ 15 TX -> ESP RX2 GPIO16\n"
+            "Manager: FZ 16 RX <- ESP TX2 GPIO17\n"
             "Common GND; ESP separately powered.\n"
             "Not yet Momentum/device verified.");
         break;
