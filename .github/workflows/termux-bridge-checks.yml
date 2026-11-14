@@ -1,0 +1,26 @@
+name: Termux bridge contract checks
+on:
+  pull_request:
+    paths:
+      - 'termux/**'
+      - '.github/workflows/termux-bridge-checks.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'termux/**'
+      - '.github/workflows/termux-bridge-checks.yml'
+jobs:
+  python-static-and-contract:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Python source syntax
+        run: python -m py_compile termux/termux_bridge.py termux/test_termux_bridge.py
+      - name: Local safety contract tests
+        run: python -m unittest discover -s termux -p 'test_*.py' -v
