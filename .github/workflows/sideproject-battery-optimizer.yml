@@ -25,9 +25,15 @@ jobs:
           javac -Xlint:all -Werror -d /tmp/flipper-ai-battery-classes \
             side_projects/flipper_ai_battery_optimizer/src/flipperai/battery/BatteryOptimizer.java \
             side_projects/flipper_ai_battery_optimizer/src/flipperai/battery/BatteryTelemetryCodec.java \
+            side_projects/flipper_ai_battery_optimizer/src/flipperai/battery/BatteryMonitorSession.java \
+            side_projects/flipper_ai_battery_optimizer/src/flipperai/battery/BatteryDischargeStudy.java \
             side_projects/flipper_ai_battery_optimizer/tests/flipperai/battery/BatteryOptimizerTest.java \
-            side_projects/flipper_ai_battery_optimizer/tests/flipperai/battery/BatteryTelemetryCodecTest.java
+            side_projects/flipper_ai_battery_optimizer/tests/flipperai/battery/BatteryTelemetryCodecTest.java \
+            side_projects/flipper_ai_battery_optimizer/tests/flipperai/battery/BatteryMonitorSessionTest.java \
+            side_projects/flipper_ai_battery_optimizer/tests/flipperai/battery/BatteryDischargeStudyTest.java
           java -cp /tmp/flipper-ai-battery-classes flipperai.battery.BatteryOptimizerTest
           java -cp /tmp/flipper-ai-battery-classes flipperai.battery.BatteryTelemetryCodecTest
+          java -cp /tmp/flipper-ai-battery-classes flipperai.battery.BatteryMonitorSessionTest
+          java -cp /tmp/flipper-ai-battery-classes flipperai.battery.BatteryDischargeStudyTest
       - name: Run existing public AI1 wire contract tests (regression)
         run: python3 -m unittest discover -s tests -p 'test_ai1_contract.py' -v
