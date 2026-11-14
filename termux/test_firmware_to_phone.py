@@ -69,6 +69,38 @@ class NativeFirmwareTests(unittest.TestCase):
             if extra:
                 self.add(archive, extra, b"unexpected")
 
+    def test_visible_passphrase_to_openssl_stdin_not_argv(self):
+        from subprocess import CompletedProcess
+        encrypted = self.root / "encrypted.enc"
+        decrypted = self.root / "decrypted.tar.gz"
+        with (patch.object(module.sys.stdin, "isatty", return_value=True),
+              patch("builtins.input", return_value="local-test-secret"),
+              patch.object(module.subprocess, "run",
+                           return_value=CompletedProcess([], 0, "", "")) as call):
+            module.decrypt_with_visible_passphrase(encrypted, decrypted)
+        args = call.call_args
+        command = args.args[0]
+        self.assertEqual(command[-2:], ["-pass", "stdin"])
+        self.assertNotIn("local-test-secret", " ".join(command))
+        self.assertEqual(args.kwargs["input"], "local-test-secret\n")
+
+    def test_visible_password_cannot_be_requested_noninteractively(self):
+        with patch.object(module.sys.stdin, "isatty", return_value=False):
+            with self.assertRaisesRegex(module.DeliveryError, "interactive local"):
+                module.decrypt_with_visible_passphrase(
+                    self.root / "encrypted.enc",
+                    self.root / "plain.tar.gz",
+                )
+
+    def test_empty_visible_password_rejected(self):
+        with (patch.object(module.sys.stdin, "isatty", return_value=True),
+              patch("builtins.input", return_value="")):
+            with self.assertRaisesRegex(module.DeliveryError, "Empty or invalid"):
+                module.decrypt_with_visible_passphrase(
+                    self.root / "encrypted.enc",
+                    self.root / "plain.tar.gz",
+                )
+
     def test_valid_native_f7_candidate(self):
         name, data, source = module.verify_delivery(self.outer)
         self.assertEqual(name, self.filename)
