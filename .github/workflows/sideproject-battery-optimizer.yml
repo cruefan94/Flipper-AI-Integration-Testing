@@ -30,11 +30,14 @@ jobs:
             side_projects/flipper_ai_battery_optimizer/tests/flipperai/battery/BatteryOptimizerTest.java \
             side_projects/flipper_ai_battery_optimizer/tests/flipperai/battery/BatteryTelemetryCodecTest.java \
             side_projects/flipper_ai_battery_optimizer/tests/flipperai/battery/BatteryMonitorSessionTest.java \
-            side_projects/flipper_ai_battery_optimizer/tests/flipperai/battery/BatteryDischargeStudyTest.java
+            side_projects/flipper_ai_battery_optimizer/tests/flipperai/battery/BatteryDischargeStudyTest.java \
+            side_projects/flipper_ai_battery_optimizer/src/flipperai/battery/BatteryRequestCodec.java \
+            side_projects/flipper_ai_battery_optimizer/tests/flipperai/battery/BatteryRequestCodecTest.java
           java -cp /tmp/flipper-ai-battery-classes flipperai.battery.BatteryOptimizerTest
           java -cp /tmp/flipper-ai-battery-classes flipperai.battery.BatteryTelemetryCodecTest
           java -cp /tmp/flipper-ai-battery-classes flipperai.battery.BatteryMonitorSessionTest
           java -cp /tmp/flipper-ai-battery-classes flipperai.battery.BatteryDischargeStudyTest
+          java -cp /tmp/flipper-ai-battery-classes flipperai.battery.BatteryRequestCodecTest
       - name: Build and test standalone power telemetry C formatter
         run: |
           cc -std=c11 -Wall -Wextra -Werror -pedantic \
@@ -42,5 +45,10 @@ jobs:
             side_projects/flipper_ai_battery_optimizer/tests/c/test_battery_telemetry.c \
             -o /tmp/flipper-battery-c-tests
           /tmp/flipper-battery-c-tests
+          cc -std=c11 -Wall -Wextra -Werror -pedantic \
+            side_projects/flipper_ai_battery_optimizer/firmware_adapter/battery_request.c \
+            side_projects/flipper_ai_battery_optimizer/tests/c/test_battery_request.c \
+            -o /tmp/flipper-battery-request-tests
+          /tmp/flipper-battery-request-tests
       - name: Run existing public AI1 wire contract tests (regression)
         run: python3 -m unittest discover -s tests -p 'test_ai1_contract.py' -v
