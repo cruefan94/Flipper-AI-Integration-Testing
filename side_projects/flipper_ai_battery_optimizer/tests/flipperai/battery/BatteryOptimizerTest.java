@@ -15,7 +15,7 @@ public final class BatteryOptimizerTest {
     public static void main(String[] args) {
         long now = 10000000L;
         check(BatteryOptimizer.evaluate(null, now).state == BatteryOptimizer.State.NO_DATA, "missing sample");
-        check(BatteryOptimizer.evaluate(sample(now - 120001, 50, false, false), now).state ==
+        check(BatteryOptimizer.evaluate(sample(now - BatteryOptimizer.STALE_AFTER_MS - 1, 50, false, false), now).state ==
               BatteryOptimizer.State.STALE_DATA, "stale sample");
         check(BatteryOptimizer.evaluate(sample(now, -1, false, false), now).state ==
               BatteryOptimizer.State.INVALID_DATA, "invalid percent");
