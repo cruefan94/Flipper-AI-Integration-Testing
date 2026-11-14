@@ -95,7 +95,8 @@ public final class BatteryDischargeStudy {
         String workload = null;
         int minStart = 101;
         int maxStart = -1;
-        for(List<Trial> group : new List[]{baseline, candidate}) {
+        for(int groupIndex = 0; groupIndex < 2; groupIndex++) {
+            List<Trial> group = (groupIndex == 0) ? baseline : candidate;
             for(Trial trial : group) {
                 if(!validTrial(trial))
                     return inconclusive(Status.NOT_COMPARABLE,
