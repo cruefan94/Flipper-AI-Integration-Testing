@@ -8,11 +8,13 @@
 #define FLIPPER_ESP_LED_PIN -1
 #endif
 
+// UART2 GPIO16 RX / GPIO17 TX are exclusively for Flipper commands.
+// UART0 GPIO3 RX / GPIO1 TX are reserved for flashing and USB console.
 static char line[fz1::kMaxLine + 1];
 static size_t used = 0;
 static bool discard_oversized = false;
 
-static void finish_reply() { Serial.println("FZ1|END"); }
+static void finish_reply() { Serial2.println("FZ1|END"); }
 
 static void passive_scan() {
     // Explicitly passive: no probe requests, association, deauth or injection.
@@ -20,11 +22,11 @@ static void passive_scan() {
     WiFi.mode(WIFI_STA);
     const int16_t count = WiFi.scanNetworks(false, false, true, 120);
     if(count < 0) {
-        Serial.println("FZ1|ERR|SCAN_FAILED");
+        Serial2.println("FZ1|ERR|SCAN_FAILED");
         finish_reply();
         return;
     }
-    Serial.printf("FZ1|OK|NETWORKS=%d\n", (int)count);
+    Serial2.printf("FZ1|OK|NETWORKS=%d\n", (int)count);
     const int16_t shown = count < 8 ? count : 8;
     for(int16_t i = 0; i < shown; ++i) {
         String name = WiFi.SSID(i);
@@ -35,7 +37,7 @@ static void passive_scan() {
             clean[n++] = (c >= 32 && c <= 126 && c != '|') ? (char)c : '_';
         }
         clean[n] = 0;
-        Serial.printf("FZ1|DATA|SSID=%s,RSSI=%d,CH=%d\n", clean,
+        Serial2.printf("FZ1|DATA|SSID=%s,RSSI=%d,CH=%d\n", clean,
                       (int)WiFi.RSSI(i), (int)WiFi.channel(i));
     }
     WiFi.scanDelete();
@@ -45,23 +47,23 @@ static void passive_scan() {
 static void execute(fz1::Command cmd) {
     switch(cmd) {
     case fz1::Command::Ping:
-        Serial.println("FZ1|OK|PONG");
+        Serial2.println("FZ1|OK|PONG");
         break;
     case fz1::Command::Info: {
         String model = ESP.getChipModel();
-        Serial.printf("FZ1|OK|CHIP=%s,REV=%d,CORES=%d\n",
+        Serial2.printf("FZ1|OK|CHIP=%s,REV=%d,CORES=%d\n",
                       model.c_str(), (int)ESP.getChipRevision(), (int)ESP.getChipCores());
         break;
     }
     case fz1::Command::Caps:
 #if FLIPPER_ESP_LED_PIN >= 0
-        Serial.println("FZ1|OK|CAPS=INFO,STATUS,WIFI_PASSIVE_SCAN,LED");
+        Serial2.println("FZ1|OK|CAPS=INFO,STATUS,WIFI_PASSIVE_SCAN,LED");
 #else
-        Serial.println("FZ1|OK|CAPS=INFO,STATUS,WIFI_PASSIVE_SCAN");
+        Serial2.println("FZ1|OK|CAPS=INFO,STATUS,WIFI_PASSIVE_SCAN");
 #endif
         break;
     case fz1::Command::Status:
-        Serial.printf("FZ1|OK|FREE_HEAP=%lu,UPTIME_MS=%lu\n",
+        Serial2.printf("FZ1|OK|FREE_HEAP=%lu,UPTIME_MS=%lu\n",
                       (unsigned long)ESP.getFreeHeap(), (unsigned long)millis());
         break;
     case fz1::Command::WifiScan:
@@ -71,19 +73,19 @@ static void execute(fz1::Command cmd) {
     case fz1::Command::LedOff:
 #if FLIPPER_ESP_LED_PIN >= 0
         digitalWrite(FLIPPER_ESP_LED_PIN, cmd == fz1::Command::LedOn ? HIGH : LOW);
-        Serial.println("FZ1|OK|LED_SET");
+        Serial2.println("FZ1|OK|LED_SET");
 #else
-        Serial.println("FZ1|ERR|LED_NOT_CONFIGURED");
+        Serial2.println("FZ1|ERR|LED_NOT_CONFIGURED");
 #endif
         break;
     default:
-        Serial.println("FZ1|ERR|INVALID_COMMAND");
+        Serial2.println("FZ1|ERR|INVALID_COMMAND");
     }
     finish_reply();
 }
 
 void setup() {
-    Serial.begin(115200);
+    Serial2.begin(115200, SERIAL_8N1, 16, 17);
 #if FLIPPER_ESP_LED_PIN >= 0
     pinMode(FLIPPER_ESP_LED_PIN, OUTPUT);
     digitalWrite(FLIPPER_ESP_LED_PIN, LOW);
@@ -91,13 +93,13 @@ void setup() {
 }
 
 void loop() {
-    while(Serial.available() > 0) {
-        const int raw = Serial.read();
+    while(Serial2.available() > 0) {
+        const int raw = Serial2.read();
         if(raw < 0) break;
         const char c = (char)raw;
         if(c == '\n') {
             if(discard_oversized) {
-                Serial.println("FZ1|ERR|LINE_TOO_LONG");
+                Serial2.println("FZ1|ERR|LINE_TOO_LONG");
                 finish_reply();
             } else {
                 line[used] = 0;
