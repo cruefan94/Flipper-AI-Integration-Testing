@@ -12,6 +12,7 @@ Use battery telemetry gathered locally on the Flipper Zero to advise its operato
 
 ## Stage 1 (included)
 - Pure Java recommendation engine for low battery, thermal warnings, charging, and active hardware tasks.
+- Strict read-only decoder for a **proposed, not deployed** AI1 BAT_TELEM message, with validation and malformed-frame tests.
 - Optional discharge trend estimate from local samples (never an exact runtime promise).
 - Fast host-only tests with javac/java; Android build and Flipper hardware tests are **not** included.
 
