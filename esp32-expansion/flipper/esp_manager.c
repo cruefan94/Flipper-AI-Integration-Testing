@@ -8,6 +8,7 @@
 #include <gui/view_dispatcher.h>
 #include <gui/modules/submenu.h>
 #include <gui/modules/text_box.h>
+#include <storage/storage.h>
 #include <string.h>
 #include <stdlib.h>
 
@@ -16,9 +17,11 @@ enum {
     EspDetect, EspInfo, EspCaps, EspStatus, EspPassiveScan,
     EspLedOn, EspLedOff, EspFlashHelp,
     EspWatchBoards, EspInstallerHelp, EspBoardDevboard, EspBoardEsp32, EspBoardUnoR3,
-    EspBoardUnoR4, EspAbout
+    EspBoardUnoR4, EspReviewSdPlan, EspAbout
 };
 #define ESP_RX_LINE 192
+#define ESP_SD_PLAN_PATH "/ext/apps_data/esp_flasher/flipper-ai-esp32-plan.txt"
+#define ESP_SD_PLAN_LIMIT 1536
 
 typedef struct {
     Gui* gui;
@@ -57,6 +60,77 @@ static void esp_show(EspManager* app, const char* text) {
     text_box_set_focus(app->text_box, TextBoxFocusStart);
     view_dispatcher_switch_to_view(app->dispatcher, EspViewText);
 }
+/* Only read a plan that the owner's host-side verified stager created.
+ * Plan content is advisory; no ROM identity, publisher authentication or
+ * permission to flash can be inferred from text on an SD card.
+ */
+static void esp_review_sd_plan(EspManager* app) {
+    Storage* storage = furi_record_open(RECORD_STORAGE);
+    File* file = storage_file_alloc(storage);
+    if(!storage_file_open(file, ESP_SD_PLAN_PATH, FSAM_READ, FSOM_OPEN_EXISTING)) {
+        esp_show(app, "NO STAGED FIRMWARE PLAN\n"
+            "Use the verified host-side installer to stage a matched package:\n"
+            "apps_data/esp_flasher/\n"
+            "It never automatically flashes hardware.");
+        storage_file_free(file);
+        furi_record_close(RECORD_STORAGE);
+        return;
+    }
+    uint64_t length = storage_file_size(file);
+    char* data = NULL;
+    if(length>0 && length<=ESP_SD_PLAN_LIMIT) data = malloc((size_t)length+1);
+    size_t got=0;
+    if(data) {
+        while(got < (size_t)length) {
+            size_t n = storage_file_read(file, data+got, (size_t)length-got);
+            if(!n) break;
+            got += n;
+        }
+    }
+    storage_file_close(file);
+    storage_file_free(file);
+    furi_record_close(RECORD_STORAGE);
+    if(!data || got!=(size_t)length) {
+        free(data);
+        esp_show(app, "INVALID OR INCOMPLETE SD FIRMWARE PLAN\n"
+            "No update offered. Re-stage a checked package.");
+        return;
+    }
+    data[got]=0;
+    bool clean=true;
+    for(size_t i=0;i<got;i++) {
+        unsigned char ch=(unsigned char)data[i];
+        if(ch==0 || (ch<32 && ch!='\n') || ch>126) {
+            clean=false;
+            break;
+        }
+    }
+    const char* classic = "FZHW1|BOARD=esp32_wroom32_devkit|CHIP=esp32|";
+    const char* devboard = "FZHW1|BOARD=flipper_wifi_devboard_s2|CHIP=esp32s2|";
+    bool matching_family =
+        strncmp(data,classic,strlen(classic))==0 ||
+        strncmp(data,devboard,strlen(devboard))==0;
+    if(!clean || !matching_family ||
+       !strstr(data, "|HW_UNVERIFIED=1\n") ||
+       !strstr(data, "NOTICE|SD_COPY_ONLY|ESP_FLASHER_APPROVAL_REQUIRED\n")) {
+        free(data);
+        esp_show(app, "UNSUPPORTED SD FIRMWARE PLAN\n"
+            "Wrong family, invalid characters or absent approval warning.\n"
+            "Do not flash. Re-stage an approved image.");
+        return;
+    }
+    furi_string_set(app->text,
+        "STAGED FIRMWARE - REVIEW ONLY\n"
+        "SD text is NOT chip ID or approved firmware.\n"
+        "Verify chip, actual flash capacity, GPIO and image offsets.\n"
+        "Owner approval in ESP Flasher is required.\n\n");
+    furi_string_cat_str(app->text,data);
+    text_box_set_text(app->text_box,furi_string_get_cstr(app->text));
+    text_box_set_focus(app->text_box,TextBoxFocusStart);
+    view_dispatcher_switch_to_view(app->dispatcher,EspViewText);
+    free(data);
+}
+
 static void esp_send(EspManager* app, const char* command) {
     if(!app->serial) {
         esp_show(app, "LPUART busy or unavailable.\nExit Flipper AI and other UART apps first.");
@@ -182,6 +256,9 @@ static void esp_menu(void* context, uint32_t index) {
               "No background polling or automatic flashing.\n"
               "Existing firmware and hardware are unchanged.");
         break;
+    case EspReviewSdPlan:
+        esp_review_sd_plan(app);
+        break;
     case EspInstallerHelp:
         esp_show(app, "HARDWARE INSTALLER - PREFLIGHT\n"
             "1. Detect board (if running FZ1) or select exact model.\n"
@@ -268,6 +345,7 @@ int32_t esp_manager_app(void* p) {
     submenu_add_item(app->submenu, "LED on (optional)", EspLedOn, esp_menu, app);
     submenu_add_item(app->submenu, "LED off (optional)", EspLedOff, esp_menu, app);
     submenu_add_item(app->submenu, "Hardware installer guide", EspInstallerHelp, esp_menu, app);
+    submenu_add_item(app->submenu, "Review staged SD firmware", EspReviewSdPlan, esp_menu, app);
     submenu_add_item(app->submenu, "Auto-detect attached (toggle)", EspWatchBoards, esp_menu, app);
     submenu_add_item(app->submenu, "Profile: Wi-Fi Devboard S2", EspBoardDevboard, esp_menu, app);
     submenu_add_item(app->submenu, "Profile: ESP32-WROOM", EspBoardEsp32, esp_menu, app);
