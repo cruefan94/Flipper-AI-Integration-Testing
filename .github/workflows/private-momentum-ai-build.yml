@@ -1,5 +1,11 @@
 name: Private Momentum AI compile on public runner
 on:
+  workflow_call:
+    secrets:
+      FLIPPER_PRIVATE_SOURCE_TOKEN:
+        required: true
+      FLIPPER_ARTIFACT_PASSPHRASE:
+        required: true
   workflow_dispatch:
   push:
     paths:
