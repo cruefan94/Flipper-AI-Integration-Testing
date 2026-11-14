@@ -23,6 +23,12 @@ import tempfile
 REPOSITORY = "cruefan94/Flipper-AI-Integration-Testing"
 WORKFLOW_NAME = "Private Momentum AI compile on public runner"
 ARTIFACT_NAME = "encrypted-flipper-ai-mobile-native-tgz-UNTESTED"
+# Exact, successful staging build. An opt-in preview is never auto-selected.
+GATT_PREVIEW_RUN_ID = 43642467806
+GATT_PREVIEW_WORKFLOW = "Private Momentum AI GATT registration preview compile on public runner"
+GATT_PREVIEW_BRANCH = "test/ai-gatt-registration-runtime-ci-20261114"
+GATT_PREVIEW_ARTIFACT = "encrypted-flipper-ai-gatt-registration-preview-tgz-UNTESTED"
+GATT_PREVIEW_SOURCE_SHA = "215bb5f61936f9d898247ada4fed5722aed8684a"
 ENCRYPTED_NAME = "flipper-ai-native-tgz-delivery.tar.gz.enc"
 FORMAT = "flipper-ai-native-tgz-delivery-v1"
 MAX_CONTENT = 100 * 1024 * 1024
@@ -71,13 +77,20 @@ def github(path: str) -> dict:
         raise DeliveryError("Invalid response from GitHub") from exc
 
 
-def find_successful_run(requested: int | None = None) -> tuple[int, int]:
+def find_successful_run(requested: int | None = None, *, preview: bool = False) -> tuple[int, int]:
+    expected_workflow = GATT_PREVIEW_WORKFLOW if preview else WORKFLOW_NAME
+    expected_branch = GATT_PREVIEW_BRANCH if preview else "main"
+    expected_artifact = GATT_PREVIEW_ARTIFACT if preview else ARTIFACT_NAME
+    if preview:
+        if requested is not None and requested != GATT_PREVIEW_RUN_ID:
+            raise DeliveryError("Preview mode permits only the reviewed GATT diagnostic run")
+        requested = GATT_PREVIEW_RUN_ID
     if requested is None:
         data = github(f"repos/{REPOSITORY}/actions/runs?per_page=50")
         eligible = [
             v for v in data.get("workflow_runs", [])
-            if v.get("name") == WORKFLOW_NAME
-            and v.get("head_branch") == "main"
+            if v.get("name") == expected_workflow
+            and v.get("head_branch") == expected_branch
             and v.get("status") == "completed"
             and v.get("conclusion") == "success"
         ]
@@ -89,8 +102,8 @@ def find_successful_run(requested: int | None = None) -> tuple[int, int]:
         if requested < 1:
             raise DeliveryError("Invalid Actions run ID")
         selected = github(f"repos/{REPOSITORY}/actions/runs/{requested}")
-        if (selected.get("name") != WORKFLOW_NAME
-                or selected.get("head_branch") != "main"
+        if (selected.get("name") != expected_workflow
+                or selected.get("head_branch") != expected_branch
                 or selected.get("status") != "completed"
                 or selected.get("conclusion") != "success"):
             raise DeliveryError("Selected run is not a successful main-branch AI firmware build")
@@ -98,7 +111,7 @@ def find_successful_run(requested: int | None = None) -> tuple[int, int]:
     data = github(f"repos/{REPOSITORY}/actions/runs/{run_id}/artifacts?per_page=100")
     eligible_artifacts = [
         a for a in data.get("artifacts", [])
-        if a.get("name") == ARTIFACT_NAME and not a.get("expired")
+        if a.get("name") == expected_artifact and not a.get("expired")
     ]
     if len(eligible_artifacts) != 1:
         raise DeliveryError("No unique non-expired encrypted native firmware artifact")
@@ -298,6 +311,8 @@ def decrypt_and_verify_artifact(encrypted: Path, decrypted: Path, *, visible: bo
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--run-id", type=int, help="Verified successful main-branch run; default newest")
+    parser.add_argument("--gatt-preview", action="store_true",
+                        help="Opt in to exact reviewed encrypted GATT service diagnostic preview (UNTESTED)")
     parser.add_argument("--share-downloads", action="store_true",
                         help="Copy verified .tgz into Android Downloads (requires Termux storage permission)")
     parser.add_argument("--show-passphrase", action="store_true",
@@ -308,14 +323,18 @@ def main() -> int:
     try:
         if shutil.which("openssl") is None:
             raise DeliveryError("OpenSSL is missing. Install the Termux openssl package.")
-        run_id, artifact_id = find_successful_run(args.run_id)
+        if args.gatt_preview:
+            print("EXPERIMENTAL GATT DIAGNOSTIC PREVIEW: NOT flashed or device verified.")
+            print("Preview requires manual backup/recovery checks and explicit owner decision before flashing.")
+        run_id, artifact_id = find_successful_run(args.run_id, preview=args.gatt_preview)
         print(f"Selected successful build {run_id}, encrypted artifact {artifact_id}.")
         work = Path.home() / "flipper-ai-workspace" / "firmware-updates"
         work.mkdir(mode=0o700, parents=True, exist_ok=True)
         with tempfile.TemporaryDirectory(prefix="staging-", dir=work) as staged:
             temp = Path(staged)
             run(["gh", "run", "download", str(run_id), "--repo", REPOSITORY,
-                 "--name", ARTIFACT_NAME, "--dir", str(temp)])
+                 "--name", GATT_PREVIEW_ARTIFACT if args.gatt_preview else ARTIFACT_NAME,
+                 "--dir", str(temp)])
             encrypted = temp / ENCRYPTED_NAME
             if not encrypted.is_file() or encrypted.stat().st_size > MAX_CONTENT:
                 raise DeliveryError("Encrypted artifact missing or unexpectedly large")
@@ -324,6 +343,8 @@ def main() -> int:
             print("Never paste the passphrase into GitHub, the Termux issue bridge, or chat.")
             filename, firmware, source = decrypt_and_verify_artifact(
                 encrypted, decrypted, visible=args.show_passphrase)
+            if args.gatt_preview and source != GATT_PREVIEW_SOURCE_SHA:
+                raise DeliveryError("Preview source SHA mismatch; refusing unreviewed firmware")
             saved = save_candidate(work, filename, firmware)
             print(f"Validated source {source}; firmware SHA256 {sha256(firmware)}.")
             print(f"Verified native F7 firmware file: {saved}")
