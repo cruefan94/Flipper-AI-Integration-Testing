@@ -140,6 +140,13 @@ jobs:
           }
           grep -qi 'GNU GENERAL PUBLIC LICENSE' "$RUNNER_TEMP/esp-flasher-upstream/LICENSE"
           test -s "$RUNNER_TEMP/esp-flasher-upstream/lib/esp-serial-flasher/src/esp_loader.c"
+          # Fetch a reviewable GPL-3.0 patch at an immutable public commit;
+          # the patched app must verify chip MD5 after writing each image.
+          curl -fLsS \
+            "https://raw.githubusercontent.com/cruefan94/Flipper-AI-Integration-Testing/554a978bf3dfdcf9fd6a59bc8538b45c44f6a3e1/hardware-installer/patch_esp_flasher_verify.py" \
+            -o "$RUNNER_TEMP/patch_esp_flasher_verify.py"
+          python3 "$RUNNER_TEMP/patch_esp_flasher_verify.py" "$RUNNER_TEMP/esp-flasher-upstream"
+          grep -q "err = esp_loader_flash_verify();" "$RUNNER_TEMP/esp-flasher-upstream/esp_flasher_worker.c"
           test ! -e "$RUNNER_TEMP/momentum-fw/applications_user/esp_flasher"
           cp -a "$RUNNER_TEMP/esp-flasher-upstream" "$RUNNER_TEMP/momentum-fw/applications_user/esp_flasher"
           cd "$RUNNER_TEMP/momentum-fw"
