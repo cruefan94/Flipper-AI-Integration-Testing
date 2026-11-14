@@ -53,6 +53,28 @@ jobs:
           test -f "$RUNNER_TEMP/private-ai/momentum_overlay/install_source_overlay.py"
       - name: Identify private firmware source revision
         run: git -C "$RUNNER_TEMP/private-ai" rev-parse HEAD
+      - name: Verify private firmware GATT UUIDs and authenticated characteristic roles
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os, pathlib, re
+          p=pathlib.Path(os.environ['RUNNER_TEMP'])/'private-ai/momentum_overlay/targets/f7/ble_glue/services/ai_satellite_service.c'
+          source=p.read_text()
+          expected={
+              'SERVICE':'c8c7ab10-6355-4ea8-a76a-0a4a64de0001',
+              'RX':'c8c7ab10-6355-4ea8-a76a-0a4a64de0002',
+              'TX':'c8c7ab10-6355-4ea8-a76a-0a4a64de0003',
+          }
+          for key,uuid in expected.items():
+              if f'{key}: ' not in source or uuid not in source:
+                  raise SystemExit(f'Missing expected {key} UUID')
+          for token in ('AI_UUID_BASE(0x01)', 'AI_UUID_BASE(0x02)', 'AI_UUID_BASE(0x03)',
+                        'CHAR_PROP_WRITE', 'CHAR_PROP_NOTIFY', 'ATTR_PERMISSION_AUTHEN_WRITE',
+                        'ATTR_PERMISSION_AUTHEN_READ', 'AI_SVC_MAX_FRAME 180u'):
+              if token not in source: raise SystemExit(f'Firmware GATT contract missing {token}')
+          print('Private firmware GATT roles and UUIDs match the public AI1 contract')
+          PY
       - name: Clone pinned upstream Momentum
         run: |
           set -euo pipefail
