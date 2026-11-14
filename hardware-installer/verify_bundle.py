@@ -129,12 +129,12 @@ def stage(manifest:Path,selected_board:str,destination:Path,approve:bool=False):
     if any((destination/name).exists() or (destination/name).is_symlink() for name in filenames):
         raise BundleError("Destination has existing file; overwriting forbidden")
     plan=(
-        f"FZHW1|BOARD={board.id}|CHIP={board.chip}|VER={version}|HW_UNVERIFIED=1\\n"
+        f"FZHW1|BOARD={board.id}|CHIP={board.chip}|VER={version}|HW_UNVERIFIED=1\n"
         + "".join(
-            f"IMG|{name}|{hex(offset) if offset is not None else 'NONE'}|{digest}\\n"
+            f"IMG|{name}|{hex(offset) if offset is not None else 'NONE'}|{digest}\n"
             for name,offset,digest in images
         )
-        + "NOTICE|SD_COPY_ONLY|ESP_FLASHER_APPROVAL_REQUIRED\\n"
+        + "NOTICE|SD_COPY_ONLY|ESP_FLASHER_APPROVAL_REQUIRED\n"
     ).encode("ascii")
     # Validate all images and targets before staging. Never trigger a flash.
     written=[]
