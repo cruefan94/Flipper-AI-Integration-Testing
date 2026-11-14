@@ -1,0 +1,32 @@
+name: Automatic CI failover monitor (public runner)
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17,47 * * * *"
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: flipper-ai-automatic-ci-failover-monitor
+  cancel-in-progress: false
+
+jobs:
+  watch-and-route:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Test automatic CI failover decision policy
+        run: python3 -m unittest discover -s tests -p 'test_ci_failover.py' -v
+      - name: Inspect failed workflows and route eligible cases once
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
+          FLIPPER_PRIVATE_ACTIONS_READ_TOKEN: ${{ secrets.FLIPPER_PRIVATE_ACTIONS_READ_TOKEN }}
+          FLIPPER_PRIVATE_SOURCE_TOKEN: ${{ secrets.FLIPPER_PRIVATE_SOURCE_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: python3 scripts/ci_failover.py
