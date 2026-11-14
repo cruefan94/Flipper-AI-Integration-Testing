@@ -126,7 +126,8 @@ static void esp_menu(void* context, uint32_t index) {
             "FLASHING IS SEPARATE.\n"
             "Use compatible ESP Flasher from Apps > GPIO.\n"
             "Verify board model and matching .bin first.\n"
-            "Program: FZ 13 TX -> ESP RX0.\n"\n            "FZ 14 RX <- ESP TX0.\n"
+            "Program: FZ 13 TX -> ESP RX0.\n"
+            "FZ 14 RX <- ESP TX0.\n"
             "Use manual BOOT/EN as instructed.\n"
             "For Manager use FZ 15/16 RX2/TX2.\n"
             "Never flash guessed images.");
