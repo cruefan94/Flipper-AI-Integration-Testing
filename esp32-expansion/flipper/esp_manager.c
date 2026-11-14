@@ -62,6 +62,9 @@ static void esp_send(EspManager* app, const char* command) {
         esp_show(app, "LPUART busy or unavailable.\nExit Flipper AI and other UART apps first.");
         return;
     }
+    /* A manual command supersedes an in-flight background read-only probe. */
+    app->watch_probe_pending = false;
+    app->watch_probe_ticks = 0;
     app->waiting = true;
     app->ticks = 0;
     app->used = 0;
@@ -72,7 +75,7 @@ static void esp_send(EspManager* app, const char* command) {
     furi_hal_serial_tx(app->serial, (const uint8_t*)"\n", 1);
 }
 static void esp_line(EspManager* app, const char* line) {
-    if(app->watch_probe_pending && strncmp(line, "FZ1|OK|CHIP=", 12) == 0) {
+    if(app->watch_probe_pending && !app->waiting && strncmp(line, "FZ1|OK|CHIP=", 12) == 0) {
         app->watch_probe_pending = false;
         /* FZ1 protocol replies are hints from an already installed companion,
          * not authenticated ESP ROM chip IDs. Never auto-select a flash image. */
