@@ -76,7 +76,7 @@ def patch_text(source):
     source=once(source,
       "    int current_step = 1;",
       """    if(num_steps <= 0) {
-        loader_port_debug_print("No firmware images selected: refusing flash.\n");
+        loader_port_debug_print("No firmware images selected: refusing flash.\\n");
         return false;
     }
     int current_step = 1;""")
@@ -85,7 +85,7 @@ def patch_text(source):
                 break;
             }""",
       """            if(err != ESP_LOADER_SUCCESS) {
-                loader_port_debug_print("Image write/MD5 failed; aborting remaining files.\n");
+                loader_port_debug_print("Image write/MD5 failed; aborting remaining files.\\n");
                 return false;
             }""")
     source=once(source,
@@ -110,11 +110,11 @@ static int32_t esp_flasher_flash_bin(void* context) {""")
       """#if MD5_ENABLED
     err = esp_loader_flash_verify();
     if(err != ESP_LOADER_SUCCESS) {
-        loader_port_debug_print("Firmware A flag MD5 FAILED.\n");
+        loader_port_debug_print("Firmware A flag MD5 FAILED.\\n");
         return true;
     }
 #else
-    loader_port_debug_print("MD5 unavailable for firmware flags.\n");
+    loader_port_debug_print("MD5 unavailable for firmware flags.\\n");
     return true;
 #endif
     loader_port_debug_print("Preparing to set flags for firmware B\\n");""")
@@ -125,15 +125,15 @@ static int32_t esp_flasher_flash_bin(void* context) {""")
       """#if MD5_ENABLED
     err = esp_loader_flash_verify();
     if(err != ESP_LOADER_SUCCESS) {
-        loader_port_debug_print("Firmware B flag MD5 FAILED.\n");
+        loader_port_debug_print("Firmware B flag MD5 FAILED.\\n");
         return true;
     }
 #else
-    loader_port_debug_print("MD5 unavailable for firmware flags.\n");
+    loader_port_debug_print("MD5 unavailable for firmware flags.\\n");
     return true;
 #endif
     *switched_ok = true;
-    loader_port_debug_print("Firmware flags programmed and MD5 verified.\n");
+    loader_port_debug_print("Firmware flags programmed and MD5 verified.\\n");
     return true;
 }""")
 
@@ -148,7 +148,7 @@ static int32_t esp_flasher_flash_bin(void* context) {""")
         app->switch_fw = SwitchNotSet;""")
     source=once(source,
       """        loader_port_debug_print(
-            "Done flashing. Please reset the board manually if it doesn't auto-reset.\n");
+            "Done flashing. Please reset the board manually if it doesn't auto-reset.\\n");
 
         // auto-reset for supported boards
         loader_port_reset_target();
@@ -159,7 +159,7 @@ static int32_t esp_flasher_flash_bin(void* context) {""")
         notification_message(app->notification, &sequence_reset_vibro);""",
       """        if(operation_ok) {
             loader_port_debug_print(
-                "FLASH VERIFIED. Reset board if it doesn't auto-reset.\n");
+                "FLASH VERIFIED. Reset board if it doesn't auto-reset.\\n");
             // Only successful, verified operations may trigger reset/success buzz.
             loader_port_reset_target();
             notification_message(app->notification, &sequence_set_vibro_on);
@@ -167,7 +167,7 @@ static int32_t esp_flasher_flash_bin(void* context) {""")
             notification_message(app->notification, &sequence_reset_vibro);
         } else {
             loader_port_debug_print(
-                "FLASH FAILED / UNVERIFIED. No automatic reset. Check logs and recovery.\n");
+                "FLASH FAILED / UNVERIFIED. No automatic reset. Check logs and recovery.\\n");
         }""")
     return source
 
