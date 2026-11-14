@@ -1,4 +1,4 @@
-# Re-run after private Python string parser fix; all artifacts encrypted.
+# Re-run after adding two new read-only API symbols to pinned private SDK mask; encrypted output only.
 name: Private Momentum AI GATT registration preview compile on public runner
 on:
   workflow_call:
