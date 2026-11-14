@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 import importlib.util
 from pathlib import Path
 import unittest
+from unittest.mock import patch
 
 root = Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location("ci_failover", root / "scripts/ci_failover.py")
@@ -87,6 +88,22 @@ class FailoverPolicyTest(unittest.TestCase):
 
     def test_unmapped_private_workflow_marked_diagnostic(self):
         self.assertEqual(module.kind_for(FW, "Other extra-app build"), "diagnostic")
+
+    def test_rerun_requires_confirmed_failed_previous_attempt(self):
+        current = run(23, 1)
+        current["run_attempt"] = 2
+        with patch.object(module, "api", return_value={
+            "status": "completed", "conclusion": "failure"
+        }) as mock_api:
+            self.assertTrue(module.failed_previous_attempt(FW, current, "fake-token"))
+            self.assertIn("/attempts/1", mock_api.call_args[0][0])
+        with patch.object(module, "api", return_value={
+            "status": "completed", "conclusion": "success"
+        }):
+            self.assertFalse(module.failed_previous_attempt(FW, current, "fake-token"))
+        current["run_attempt"] = 1
+        with patch.object(module, "api", side_effect=AssertionError("unexpected network")):
+            self.assertFalse(module.failed_previous_attempt(FW, current, "fake-token"))
 
     def test_dedupe_uses_source_repo_and_run(self):
         candidate = self.candidates(run(2, 1), run(1, 2))[0]
