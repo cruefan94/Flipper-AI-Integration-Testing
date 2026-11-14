@@ -4,6 +4,8 @@ import hashlib
 import importlib.util
 import io
 import json
+import os
+import subprocess
 from pathlib import Path
 import tarfile
 import tempfile
@@ -69,37 +71,102 @@ class NativeFirmwareTests(unittest.TestCase):
             if extra:
                 self.add(archive, extra, b"unexpected")
 
-    def test_visible_passphrase_to_openssl_stdin_not_argv(self):
+    def test_visible_passphrase_to_openssl_env_not_argv(self):
         from subprocess import CompletedProcess
         encrypted = self.root / "encrypted.enc"
         decrypted = self.root / "decrypted.tar.gz"
+        secret = "local-test-secret"
+        observed = []
+        def fake_process(command, **kwargs):
+            self.assertNotIn(secret, " ".join(command))
+            self.assertEqual(command[-2:], [
+                "-pass", "env:FLIPPER_AI_LOCAL_OPENSSL_PASSPHRASE"])
+            observed.append(kwargs["env"]["FLIPPER_AI_LOCAL_OPENSSL_PASSPHRASE"])
+            return CompletedProcess(command, 0, "", "")
         with (patch.object(module.sys.stdin, "isatty", return_value=True),
-              patch("builtins.input", return_value="local-test-secret"),
-              patch.object(module.subprocess, "run",
-                           return_value=CompletedProcess([], 0, "", "")) as call):
-            module.decrypt_with_visible_passphrase(encrypted, decrypted)
-        args = call.call_args
-        command = args.args[0]
-        self.assertEqual(command[-2:], ["-pass", "stdin"])
-        self.assertNotIn("local-test-secret", " ".join(command))
-        self.assertEqual(args.kwargs["input"], "local-test-secret\n")
+              patch("builtins.input", return_value=secret),
+              patch.object(module.subprocess, "run", side_effect=fake_process),
+              patch.object(module, "verify_delivery",
+                           return_value=("synthetic.tgz", b"ok", "test"))):
+            value = module.decrypt_and_verify_artifact(
+                encrypted, decrypted, visible=True)
+        self.assertEqual(value[0], "synthetic.tgz")
+        self.assertEqual(observed, [secret])
 
     def test_visible_password_cannot_be_requested_noninteractively(self):
         with patch.object(module.sys.stdin, "isatty", return_value=False):
             with self.assertRaisesRegex(module.DeliveryError, "interactive local"):
-                module.decrypt_with_visible_passphrase(
+                module.decrypt_and_verify_artifact(
                     self.root / "encrypted.enc",
                     self.root / "plain.tar.gz",
+                    visible=True,
                 )
 
     def test_empty_visible_password_rejected(self):
         with (patch.object(module.sys.stdin, "isatty", return_value=True),
               patch("builtins.input", return_value="")):
             with self.assertRaisesRegex(module.DeliveryError, "Empty or invalid"):
-                module.decrypt_with_visible_passphrase(
+                module.decrypt_and_verify_artifact(
                     self.root / "encrypted.enc",
                     self.root / "plain.tar.gz",
+                    visible=True,
                 )
+
+    def test_github_secret_trailing_newline_decrypts_same_visible_password(self):
+        # Real OpenSSL regression: GitHub env: uses a literal copied newline,
+        # while the old phone -pass stdin silently stripped it.
+        for suffix in ("\n", "\r\n"):
+            with self.subTest(suffix=repr(suffix)):
+                secret = "known-local-testing-secret"
+                enc = self.root / ("encrypted-" + str(len(suffix)) + ".enc")
+                dec = self.root / ("decrypted-" + str(len(suffix)) + ".tar.gz")
+                env = dict(os.environ)
+                env["SYNTHETIC_GITHUB_SECRET"] = secret + suffix
+                command = [
+                    "openssl", "enc", "-aes-256-cbc", "-pbkdf2", "-iter", "250000",
+                    "-salt", "-in", str(self.outer), "-out", str(enc),
+                    "-pass", "env:SYNTHETIC_GITHUB_SECRET",
+                ]
+                subprocess.run(command, env=env, capture_output=True, check=True)
+                with (patch.object(module.sys.stdin, "isatty", return_value=True),
+                      patch("builtins.input", return_value=secret)):
+                    name, _, rev = module.decrypt_and_verify_artifact(
+                        enc, dec, visible=True)
+                self.assertEqual(name, self.filename)
+                self.assertEqual(rev, "unit-test-only")
+
+    def test_correct_password_without_extra_newline_still_decrypts(self):
+        secret = "known-local-testing-secret"
+        enc = self.root / "encrypted-regular.enc"
+        dec = self.root / "decrypted-regular.tar.gz"
+        env = dict(os.environ)
+        env["SYNTHETIC_GITHUB_SECRET"] = secret
+        subprocess.run([
+            "openssl", "enc", "-aes-256-cbc", "-pbkdf2", "-iter", "250000",
+            "-salt", "-in", str(self.outer), "-out", str(enc),
+            "-pass", "env:SYNTHETIC_GITHUB_SECRET",
+        ], env=env, capture_output=True, check=True)
+        with (patch.object(module.sys.stdin, "isatty", return_value=True),
+              patch("builtins.input", return_value=secret)):
+            name, _, _ = module.decrypt_and_verify_artifact(
+                enc, dec, visible=True)
+        self.assertEqual(name, self.filename)
+
+    def test_unrelated_password_does_not_decrypt(self):
+        enc = self.root / "encrypted-wrong.enc"
+        dec = self.root / "decrypted-wrong.tar.gz"
+        env = dict(os.environ)
+        env["SYNTHETIC_GITHUB_SECRET"] = "correct-local-test-password"
+        subprocess.run([
+            "openssl", "enc", "-aes-256-cbc", "-pbkdf2", "-iter", "250000",
+            "-salt", "-in", str(self.outer), "-out", str(enc),
+            "-pass", "env:SYNTHETIC_GITHUB_SECRET",
+        ], env=env, capture_output=True, check=True)
+        with (patch.object(module.sys.stdin, "isatty", return_value=True),
+              patch("builtins.input", return_value="a-wrong-password")):
+            with self.assertRaisesRegex(module.DeliveryError, "Could not decrypt"):
+                module.decrypt_and_verify_artifact(
+                    enc, dec, visible=True)
 
     def test_valid_native_f7_candidate(self):
         name, data, source = module.verify_delivery(self.outer)

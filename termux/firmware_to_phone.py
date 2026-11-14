@@ -7,6 +7,7 @@ untrusted execution approval, read secret environment variables, or publish keys
 from __future__ import annotations
 
 import argparse
+import getpass
 import hashlib
 import io
 import json
@@ -228,36 +229,70 @@ def save_candidate(destination: Path, filename: str, data: bytes, *, private: bo
     return target
 
 
-def decrypt_with_visible_passphrase(encrypted: Path, decrypted: Path) -> None:
-    """Opt-in visible, local-only input; never place passphrase in argv or GitHub."""
+def decrypt_and_verify_artifact(encrypted: Path, decrypted: Path, *, visible: bool = False):
+    """Verify encrypted delivery using the literal secret or invisible newline variants.
+
+    GitHub Actions uses 'openssl -pass env:DELIVERY_PASSPHRASE' which preserves
+    trailing newline(s). The old phone client used 'openssl -pass stdin', which
+    truncates the password at the first newline. A copied password can therefore
+    be visually identical yet fail. No secret is logged or sent over GitHub.
+    """
     if not sys.stdin.isatty():
-        raise DeliveryError("Visible entry requires an interactive local Termux terminal")
-    print("WARNING: your passphrase will be visible on screen and in terminal scrollback.")
-    print("Do not take screenshots, screen-share, or run this via the GitHub issue bridge.")
+        raise DeliveryError("Passphrase entry requires an interactive local Termux terminal")
+    if visible:
+        print("WARNING: password characters are visible on screen; avoid screenshots and screen sharing.")
+        print("Use a private terminal, not the remote GitHub issue command bridge.")
     try:
-        passphrase = input("Artifact passphrase (VISIBLE): ")
+        passphrase = (input("Artifact passphrase (VISIBLE): ")
+                      if visible else getpass.getpass("Artifact passphrase (hidden): "))
     except (EOFError, KeyboardInterrupt) as exc:
-        raise DeliveryError("Visible passphrase entry canceled") from exc
-    if not passphrase or "\n" in passphrase or "\r" in passphrase:
+        raise DeliveryError("Passphrase entry canceled") from exc
+    if not passphrase or "\r" in passphrase or "\n" in passphrase:
         raise DeliveryError("Empty or invalid passphrase")
+    env_key = "FLIPPER_AI_LOCAL_OPENSSL_PASSPHRASE"
     command = [
         "openssl", "enc", "-d", "-aes-256-cbc", "-pbkdf2", "-iter", "250000",
-        "-salt", "-in", str(encrypted), "-out", str(decrypted), "-pass", "stdin",
+        "-salt", "-in", str(encrypted), "-out", str(decrypted),
+        "-pass", "env:" + env_key,
     ]
+    invalid_archive = False
+    # Retry only an exact password and common invisible clipboard line endings.
+    # The GitHub encryption step's env: source includes the line ending; stdin
+    # and interactive password sources strip it.
+    variants = (("", "exact"), ("\n", "trailing LF"),
+                ("\r\n", "trailing CRLF"))
     try:
-        result = subprocess.run(
-            command, input=passphrase + "\n", text=True, capture_output=True,
-            timeout=90, check=False,
-        )
-    except (OSError, subprocess.TimeoutExpired) as exc:
-        raise DeliveryError("OpenSSL decryption failed to start or timed out") from exc
+        for suffix, label in variants:
+            env = os.environ.copy()
+            env[env_key] = passphrase + suffix
+            try:
+                result = subprocess.run(
+                    command, env=env, capture_output=True, text=True,
+                    timeout=90, check=False,
+                )
+            except (OSError, subprocess.TimeoutExpired) as exc:
+                raise DeliveryError("OpenSSL decryption failed to start or timed out") from exc
+            finally:
+                del env[env_key]
+            if result.returncode != 0:
+                continue
+            try:
+                verified = verify_delivery(decrypted)
+            except DeliveryError:
+                invalid_archive = True
+                continue
+            if suffix:
+                print("Detected an invisible " + label + " in the GitHub encryption secret.")
+                print("The native F7 firmware archive passed independent hash verification.")
+            return verified
     finally:
         passphrase = None
-    if result.returncode:
-        raise DeliveryError(
-            "Decryption failed. Check the saved artifact passphrase; "
-            "GitHub login password is not the firmware passphrase."
-        )
+    if invalid_archive:
+        raise DeliveryError("OpenSSL decrypted bytes but archive integrity verification failed.")
+    raise DeliveryError(
+        "Could not decrypt with the entered text, including trailing newline variants. "
+        "Confirm this passphrase matches the selected GitHub Actions build's secret."
+    )
 
 
 def main() -> int:
@@ -287,12 +322,8 @@ def main() -> int:
             decrypted = temp / "verified-delivery.tar.gz"
             print("OpenSSL will prompt for your existing private artifact passphrase.")
             print("Never paste the passphrase into GitHub, the Termux issue bridge, or chat.")
-            if args.show_passphrase:
-                decrypt_with_visible_passphrase(encrypted, decrypted)
-            else:
-                run(["openssl", "enc", "-d", "-aes-256-cbc", "-pbkdf2", "-iter", "250000",
-                     "-salt", "-in", str(encrypted), "-out", str(decrypted)], interactive=True)
-            filename, firmware, source = verify_delivery(decrypted)
+            filename, firmware, source = decrypt_and_verify_artifact(
+                encrypted, decrypted, visible=args.show_passphrase)
             saved = save_candidate(work, filename, firmware)
             print(f"Validated source {source}; firmware SHA256 {sha256(firmware)}.")
             print(f"Verified native F7 firmware file: {saved}")

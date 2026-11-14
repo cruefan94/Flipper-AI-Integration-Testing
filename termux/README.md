@@ -88,6 +88,8 @@ Output filtering is best-effort only: do not run commands that print secrets or 
 
 The normal OpenSSL prompt hides passphrase characters. To **show the text as you type** instead, run the phone helper with `--show-passphrase` (you can combine it with `--share-downloads`). The helper reads passphrase text locally from the interactive Termux terminal and supplies it to OpenSSL through standard input, **not** command arguments, environment variables, GitHub Issues or logs.
 
+**Clipboard newline fix (November 14, 2026):** The GitHub build uses OpenSSL with a secret read from an **environment variable**, where an invisible trailing LF/CRLF copied from a password manager can be part of the encryption key. The old phone helper used OpenSSL's **stdin**, which discards the newline, causing repeated \`bad decrypt\` even with correct visible text. The phone helper now tries the exact locally entered string and the common invisible LF/CRLF endings. Each candidate is accepted **only if the complete native firmware delivery archive and SHA256 checks pass**. No extra password characters are printed or sent to GitHub Issues; a successful compatibility check reports that an invisible newline was found.
+
 **Security tradeoff:** visible characters can remain in the screen/terminal scrollback. Avoid screenshots, screen recording, shared displays or screen mirroring, and clear the terminal after the attempt. This option deliberately refuses noninteractive execution through the GitHub command queue. `bad decrypt` despite visible accurate entry means the input does not match the GitHub artifact encryption secret; GitHub cannot show the old secret. Reset `FLIPPER_ARTIFACT_PASSPHRASE` and rerun firmware build rather than guessing indefinitely.
 
 ~~~sh
