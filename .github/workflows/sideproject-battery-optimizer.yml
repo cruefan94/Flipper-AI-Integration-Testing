@@ -29,6 +29,7 @@ jobs:
           done
       - name: Demo synthetic battery profile
         run: |
+          ROOT=side_projects/flipper_ai_battery_optimizer
           java -cp /tmp/flipper-ai-battery-classes flipperai.battery.BatterySimulator 10 0 0
           java -cp /tmp/flipper-ai-battery-classes flipperai.battery.BatterySimulator 50 0 1
           java -cp /tmp/flipper-ai-battery-classes flipperai.battery.BatteryTrialCli "$ROOT"/examples/SYNTHETIC_trials.csv
