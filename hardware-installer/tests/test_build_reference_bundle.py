@@ -18,9 +18,9 @@ class ReferenceBundleTests(unittest.TestCase):
         self.build=self.root/"esp32dev"
         self.build.mkdir()
         for name,contents in (
-            ("bootloader.bin",b"\xE9"+"BOOT"*18),
-            ("partitions.bin",b"\xAA\x50"+"PART"*18),
-            ("firmware.bin",b"\xE9"+"APP"*170)
+            ("bootloader.bin",b"\xE9"+b"BOOT"*18),
+            ("partitions.bin",b"\xAA\x50"+b"PART"*18),
+            ("firmware.bin",b"\xE9"+b"APP"*170)
         ):
             (self.build/name).write_bytes(contents)
         self.dest=self.root/"bundle"
