@@ -1,5 +1,10 @@
 name: Automatic CI failover monitor (public runner)
 on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/ci-failover-monitor.yml'
+      - 'scripts/ci_failover.py'
   workflow_dispatch:
   schedule:
     - cron: "17,47 * * * *"
