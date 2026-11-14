@@ -86,7 +86,7 @@ Output filtering is best-effort only: do not run commands that print secrets or 
 
 ### Optional visible passphrase entry
 
-The normal OpenSSL prompt hides passphrase characters. To **show the text as you type** instead, run the phone helper with `--show-passphrase` (you can combine it with `--share-downloads`). The helper reads passphrase text locally from the interactive Termux terminal and supplies it to OpenSSL through standard input, **not** command arguments, environment variables, GitHub Issues or logs.
+The normal OpenSSL prompt hides passphrase characters. To **show the text as you type** instead, run the phone helper with `--show-passphrase` (you can combine it with `--share-downloads`). The helper reads passphrase text locally from the interactive Termux terminal and supplies it through a short-lived, local OpenSSL child-process environment, **not** command arguments, GitHub Issues or logs.
 
 **Clipboard newline fix (November 14, 2026):** The GitHub build uses OpenSSL with a secret read from an **environment variable**, where an invisible trailing LF/CRLF copied from a password manager can be part of the encryption key. The old phone helper used OpenSSL's **stdin**, which discards the newline, causing repeated \`bad decrypt\` even with correct visible text. The phone helper now tries the exact locally entered string and the common invisible LF/CRLF endings. Each candidate is accepted **only if the complete native firmware delivery archive and SHA256 checks pass**. No extra password characters are printed or sent to GitHub Issues; a successful compatibility check reports that an invisible newline was found.
 
@@ -95,6 +95,38 @@ The normal OpenSSL prompt hides passphrase characters. To **show the text as you
 ~~~sh
 python "$HOME/.flipper-ai-termux/firmware_to_phone.py" --show-passphrase --share-downloads
 ~~~
+
+### Optional *exact* GATT registration diagnostics firmware preview
+
+The custom Flipper AI GATT service is still unverified on physical hardware. A
+**separate encrypted source/CI-verified diagnostic preview** from
+[public runner #43642467806](https://github.com/cruefan94/Flipper-AI-Integration-Testing/actions/runs/43642467806)
+adds a read-only **AI GATT registered** line to the Flipper AI Satellite status
+screen. It does **not** establish a working AI1 Bluetooth link.
+
+This helper **never automatically selects** preview builds. If the owner chooses
+to physically test this firmware after confirming the qFlipper/DFU recovery
+path and backup, explicitly request the exact allowlisted preview:
+
+~~~sh
+python "$HOME/.flipper-ai-termux/firmware_to_phone.py" --gatt-preview --share-downloads
+~~~
+
+The helper accepts **only** Actions run `43642467806`, its expected workflow
+and test branch, the encrypted artifact name, and private source revision
+`215bb5f61936f9d898247ada4fed5722aed8684a`, alongside the complete
+native F7 archive/hash validations. It refuses arbitrary preview run IDs. The
+same private artifact passphrase is entered locally. The download/extraction
+does **not** flash, re-pair Bluetooth, or modify the installed Android app.
+This staging artifact expires under GitHub's retention policy; the helper
+fails if expired rather than selecting a different preview.
+
+**No need to use this option until the owner has opted into another firmware
+flash.** Preserve the successfully installed custom Momentum version as the
+physical recovery baseline. After an explicitly approved flash, compare
+`AI GATT registered: Yes / No` against Android's redacted GATT discovery:
+registration present but Android missing it suggests stale cache/connection;
+registration absent points toward firmware startup/service allocation.
 
 ## Prepare verified firmware on Android (no automatic flashing)
 
