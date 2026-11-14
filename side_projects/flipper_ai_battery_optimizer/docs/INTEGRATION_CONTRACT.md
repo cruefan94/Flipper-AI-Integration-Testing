@@ -7,6 +7,12 @@
 - Public Android `feature/android-radio-listening-v238`: `SatelliteProtocol.java`, `FrameCodec.java`, `SatelliteRequestHandler.java`. Current supported inbound types are `HELLO`, `PING`, `ASK`, not a battery snapshot command.
 - Existing private Flipper `flipper_app/flipper_ai.c` reads battery percentage/health/charging **locally**. These APIs do not prove phone-readable battery telemetry.
 
+## Proposed telemetry example (future only)
+
+`AI1|BAT_TELEM|7|v1,p=83,h=95,t=230,c=0,a=0\n`
+
+The phone decoder is in `src/flipperai/battery/BatteryTelemetryCodec.java` and uses **Android receive time**, not a device clock. Field `p` is percent, `h` optional health percent, `t` optional temperature in tenths of a degree C; `c` and `a` are mandatory charging and hardware-busy booleans. An unknown busy state must **not** be converted to false. The existing Android handler does not yet accept `BAT_TELEM`; no Flipper firmware sends this frame yet.
+
 ## Proposed (future only)
 A versioned read-only power capability negotiated after a trusted HELLO, **not enabled by default**. Add a new allowlisted request/response type only when both clients support it. Keep AI1's 180-byte limit, no unescaped separators/newlines, strict request ID checks, timeout/size handling, and connection-epoch cancellation.
 
