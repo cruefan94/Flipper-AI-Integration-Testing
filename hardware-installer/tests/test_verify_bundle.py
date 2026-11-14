@@ -43,7 +43,7 @@ class InstallerPreflight(unittest.TestCase):
         self.assertEqual(len(copied),2)
         self.assertEqual(copied[0].read_bytes(),b"image-data-for-testing")
         plan=(self.output/"flipper-ai-esp32-plan.txt").read_text()
-        self.assertIn("FZHW1|BOARD=esp32_wroom32_devkit|CHIP=esp32|VER=dev-1|HW_UNVERIFIED=1\\n",plan)
+        self.assertIn("FZHW1|BOARD=esp32_wroom32_devkit|CHIP=esp32|VER=dev-1|HW_UNVERIFIED=1\n",plan)
         self.assertIn("IMG|firmware.bin|0x10000|",plan)
         self.assertIn("NOTICE|SD_COPY_ONLY|ESP_FLASHER_APPROVAL_REQUIRED",plan)
         with self.assertRaisesRegex(BundleError,"overwriting"):
