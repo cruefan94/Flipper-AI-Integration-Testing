@@ -1,5 +1,5 @@
 /* Flipper AI ESP32 Manager — standalone, isolated UART companion FAP.
- * LPUART: Flipper pin 15 TX -> classic ESP32 RX0, pin 16 RX <- TX0, common GND.
+ * LPUART: Flipper pin 15 TX -> ESP32 RX2/GPIO16, pin 16 RX <- TX2/GPIO17, common GND.
  * ESP Flasher remains a separate upstream app; this app never writes flash.
  */
 #include <furi.h>
@@ -126,15 +126,17 @@ static void esp_menu(void* context, uint32_t index) {
             "FLASHING IS SEPARATE.\n"
             "Use compatible ESP Flasher from Apps > GPIO.\n"
             "Verify board model and matching .bin first.\n"
-            "Use UART0 plus manual BOOT/EN as instructed.\n"
+            "Move TX/RX wires to ESP RX0/TX0 first.\n"
+            "Use manual BOOT/EN as instructed.\n"
+            "Reconnect RX2/TX2 to use Manager.\n"
             "Never flash guessed images.");
         break;
     case EspAbout:
         esp_show(app,
             "ESP32 Manager v0.1 SOURCE PROTOTYPE\n"
             "FZ1 115200 8N1 LPUART.\n"
-            "Flipper 15 TX -> ESP RX0\n"
-            "Flipper 16 RX <- ESP TX0\n"
+            "Flipper 15 TX -> ESP RX2 (GPIO16)\n"
+            "Flipper 16 RX <- ESP TX2 (GPIO17)\n"
             "Common GND; ESP separately powered.\n"
             "Not yet Momentum/device verified.");
         break;
