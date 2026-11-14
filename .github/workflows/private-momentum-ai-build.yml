@@ -99,6 +99,7 @@ jobs:
           python3 -m unittest discover -s tests -p 'test_local_health_and_ble_guide.py' -v
           python3 -m unittest discover -s tests -p 'test_ai_gatt_registration_diagnostics.py' -v
           python3 -m unittest discover -s tests -p 'test_esp32_main_integration.py' -v
+          python3 -m unittest discover -s tests -p 'test_esp32_autodetect_profiles.py' -v
       - name: Apply AI source overlays
         run: |
           set -euo pipefail
