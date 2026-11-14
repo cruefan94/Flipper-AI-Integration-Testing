@@ -54,6 +54,9 @@ public final class BatteryOptimizer {
         return new Advice(state, null, 0, 0, text);
     }
 
+    /** Battery samples normally arrive every 3-5 minutes; allow one minute for retry. */
+    public static final long STALE_AFTER_MS = 360000L;
+
     private static boolean valid(Sample s) {
         return s != null && s.timestampMs >= 0 && s.levelPct >= 0 && s.levelPct <= 100 &&
             (s.healthPct == null || (s.healthPct >= 0 && s.healthPct <= 100)) &&
@@ -66,7 +69,7 @@ public final class BatteryOptimizer {
         if(sample == null) return noAction(State.NO_DATA, "No Flipper reading; connect to inspect battery.");
         if(!valid(sample) || nowMs < sample.timestampMs)
             return noAction(State.INVALID_DATA, "Invalid battery telemetry; do not adjust settings.");
-        if(nowMs - sample.timestampMs > 120000L)
+        if(nowMs - sample.timestampMs > STALE_AFTER_MS)
             return noAction(State.STALE_DATA, "Battery reading is stale; request an updated snapshot.");
         if(sample.temperatureC != null &&
            (sample.temperatureC >= 50.0 || sample.temperatureC <= -10.0))
