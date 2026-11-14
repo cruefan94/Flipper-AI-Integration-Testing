@@ -12,6 +12,15 @@ int main() {
     assert(fz1::parse("FZ1|WIFI_SCAN") == Command::WifiScan);
     assert(fz1::parse("FZ1|LED|ON") == Command::LedOn);
     assert(fz1::parse("FZ1|LED|OFF") == Command::LedOff);
+    assert(fz1::parse("FZ1|SENSORS") == Command::Sensors);
+    assert(fz1::parse("FZ1|SENSOR|ADC34") == Command::SensorAdc34);
+    assert(fz1::parse("FZ1|SENSOR|GPIO27") == Command::SensorGpio27);
+    assert(fz1::parse("FZ1|SENSOR|I2C_SCAN") == Command::SensorI2CScan);
+    assert(fz1::parse("FZ1|SENSOR|BME280") == Command::SensorBme280);
+    assert(fz1::parse("FZ1|SENSOR|DHT22") == Command::SensorDht22);
+    assert(fz1::parse("FZ1|SENSOR|GPIO21|WRITE") == Command::Invalid);
+    assert(fz1::parse("FZ1|SENSOR|ADC35") == Command::Invalid);
+    assert(fz1::parse("FZ1|SENSOR|HC_SR04") == Command::Invalid);
     assert(fz1::parse(nullptr) == Command::Invalid);
     assert(fz1::parse("") == Command::Invalid);
     assert(fz1::parse("PING") == Command::Invalid);

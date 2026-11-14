@@ -14,7 +14,8 @@
 enum { EspViewMenu, EspViewText };
 enum {
     EspDetect, EspInfo, EspCaps, EspStatus, EspPassiveScan,
-    EspLedOn, EspLedOff, EspFlashHelp, EspAbout
+    EspLedOn, EspLedOff, EspSensors, EspAdc34, EspGpio27,
+    EspI2CScan, EspBme280, EspDht22, EspFlashHelp, EspAbout
 };
 #define ESP_RX_LINE 192
 
@@ -121,6 +122,12 @@ static void esp_menu(void* context, uint32_t index) {
     case EspPassiveScan: esp_send(app, "FZ1|WIFI_SCAN"); break;
     case EspLedOn: esp_send(app, "FZ1|LED|ON"); break;
     case EspLedOff: esp_send(app, "FZ1|LED|OFF"); break;
+    case EspSensors: esp_send(app, "FZ1|SENSORS"); break;
+    case EspAdc34: esp_send(app, "FZ1|SENSOR|ADC34"); break;
+    case EspGpio27: esp_send(app, "FZ1|SENSOR|GPIO27"); break;
+    case EspI2CScan: esp_send(app, "FZ1|SENSOR|I2C_SCAN"); break;
+    case EspBme280: esp_send(app, "FZ1|SENSOR|BME280"); break;
+    case EspDht22: esp_send(app, "FZ1|SENSOR|DHT22"); break;
     case EspFlashHelp:
         esp_show(app,
             "FLASHING IS SEPARATE.\n"
@@ -164,6 +171,12 @@ int32_t esp_manager_app(void* p) {
     submenu_add_item(app->submenu, "Passive Wi-Fi scan", EspPassiveScan, esp_menu, app);
     submenu_add_item(app->submenu, "LED on (optional)", EspLedOn, esp_menu, app);
     submenu_add_item(app->submenu, "LED off (optional)", EspLedOff, esp_menu, app);
+    submenu_add_item(app->submenu, "Sensor profiles", EspSensors, esp_menu, app);
+    submenu_add_item(app->submenu, "Analog reading P34", EspAdc34, esp_menu, app);
+    submenu_add_item(app->submenu, "Digital input P27", EspGpio27, esp_menu, app);
+    submenu_add_item(app->submenu, "I2C module scan", EspI2CScan, esp_menu, app);
+    submenu_add_item(app->submenu, "BME280 readings", EspBme280, esp_menu, app);
+    submenu_add_item(app->submenu, "DHT22 readings", EspDht22, esp_menu, app);
     submenu_add_item(app->submenu, "How to flash firmware", EspFlashHelp, esp_menu, app);
     submenu_add_item(app->submenu, "About", EspAbout, esp_menu, app);
     view_set_previous_callback(submenu_get_view(app->submenu), esp_previous_exit);

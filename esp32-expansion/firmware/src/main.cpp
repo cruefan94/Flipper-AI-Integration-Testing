@@ -2,6 +2,10 @@
 // Compile for the exact target before flashing. No cloud keys or automatic connections.
 #include <Arduino.h>
 #include <WiFi.h>
+#include <Wire.h>
+#include <DHT.h>
+#include <Adafruit_BME280.h>
+#include <math.h>
 #include "protocol.h"
 
 #ifndef FLIPPER_ESP_LED_PIN
@@ -13,6 +17,15 @@
 static char line[fz1::kMaxLine + 1];
 static size_t used = 0;
 static bool discard_oversized = false;
+// Read-only expansion profile for photographed 38-pin ESP-WROOM-32 carrier.
+// GPIO34 ADC, GPIO27 digital input, GPIO25 DHT22, GPIO21/22 I2C.
+// 3.3V signals only; never connect 5V Uno outputs directly.
+static constexpr int kAdcPin = 34;
+static constexpr int kDigitalPin = 27;
+static constexpr int kDhtPin = 25;
+static DHT dht(kDhtPin, DHT22);
+static Adafruit_BME280 bme;
+static bool bme_present = false;
 
 static void finish_reply() { Serial2.println("FZ1|END"); }
 
@@ -44,6 +57,59 @@ static void passive_scan() {
     finish_reply();
 }
 
+
+static void list_sensors() {
+    // Profiles are compiled in; attached sensors are NOT necessarily present.
+    Serial2.println("FZ1|OK|SUPPORTED=ADC34,GPIO27,I2C_SCAN,BME280,DHT22");
+    Serial2.println(bme_present ? "FZ1|DATA|BME280=DETECTED" : "FZ1|DATA|BME280=NOT_DETECTED");
+    finish_reply();
+}
+
+static void read_sensor(fz1::Command cmd) {
+    switch(cmd) {
+    case fz1::Command::SensorAdc34:
+        Serial2.printf("FZ1|OK|ADC34_RAW=%d\n", analogRead(kAdcPin));
+        break;
+    case fz1::Command::SensorGpio27:
+        Serial2.printf("FZ1|OK|GPIO27_LEVEL=%d\n", digitalRead(kDigitalPin));
+        break;
+    case fz1::Command::SensorI2CScan: {
+        uint8_t found = 0;
+        for(uint8_t address = 0x08; address < 0x78; ++address) {
+            Wire.beginTransmission(address);
+            if(Wire.endTransmission() == 0) {
+                if(found < 12) Serial2.printf("FZ1|DATA|I2C_ADDR=0x%02X\n", address);
+                ++found;
+            }
+        }
+        Serial2.printf("FZ1|OK|I2C_DEVICES=%u\n", (unsigned)found);
+        break;
+    }
+    case fz1::Command::SensorBme280:
+        if(!bme_present) {
+            Serial2.println("FZ1|ERR|BME280_NOT_CONNECTED");
+            break;
+        }
+        Serial2.printf("FZ1|OK|BME280_TEMP_C=%.1f,RH=%.1f,PRESSURE_PA=%.0f\n",
+            bme.readTemperature(), bme.readHumidity(), bme.readPressure());
+        break;
+    case fz1::Command::SensorDht22: {
+        const float humidity = dht.readHumidity();
+        const float temp = dht.readTemperature();
+        if(isnan(humidity) || isnan(temp)) {
+            Serial2.println("FZ1|ERR|DHT22_NOT_READY_OR_MISSING");
+        } else {
+            Serial2.printf("FZ1|OK|DHT22_TEMP_C=%.1f,RH=%.1f\n", temp, humidity);
+        }
+        break;
+    }
+    default:
+        Serial2.println("FZ1|ERR|UNSUPPORTED_SENSOR");
+        break;
+    }
+    finish_reply();
+}
+
 static void execute(fz1::Command cmd) {
     switch(cmd) {
     case fz1::Command::Ping:
@@ -69,6 +135,16 @@ static void execute(fz1::Command cmd) {
     case fz1::Command::WifiScan:
         passive_scan();
         return; // passive_scan emitted its own END
+    case fz1::Command::Sensors:
+        list_sensors();
+        return;
+    case fz1::Command::SensorAdc34:
+    case fz1::Command::SensorGpio27:
+    case fz1::Command::SensorI2CScan:
+    case fz1::Command::SensorBme280:
+    case fz1::Command::SensorDht22:
+        read_sensor(cmd);
+        return;
     case fz1::Command::LedOn:
     case fz1::Command::LedOff:
 #if FLIPPER_ESP_LED_PIN >= 0
@@ -86,6 +162,11 @@ static void execute(fz1::Command cmd) {
 
 void setup() {
     Serial2.begin(115200, SERIAL_8N1, 16, 17);
+    pinMode(kDigitalPin, INPUT_PULLUP);
+    analogReadResolution(12);
+    Wire.begin(21, 22);
+    dht.begin();
+    bme_present = bme.begin(0x76, &Wire) || bme.begin(0x77, &Wire);
 #if FLIPPER_ESP_LED_PIN >= 0
     pinMode(FLIPPER_ESP_LED_PIN, OUTPUT);
     digitalWrite(FLIPPER_ESP_LED_PIN, LOW);

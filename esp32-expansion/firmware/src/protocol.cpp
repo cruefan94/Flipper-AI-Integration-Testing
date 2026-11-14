@@ -16,6 +16,12 @@ Command parse(const char* line) {
     if(strcmp(cmd, "WIFI_SCAN") == 0) return Command::WifiScan;
     if(strcmp(cmd, "LED|ON") == 0) return Command::LedOn;
     if(strcmp(cmd, "LED|OFF") == 0) return Command::LedOff;
+    if(strcmp(cmd, "SENSORS") == 0) return Command::Sensors;
+    if(strcmp(cmd, "SENSOR|ADC34") == 0) return Command::SensorAdc34;
+    if(strcmp(cmd, "SENSOR|GPIO27") == 0) return Command::SensorGpio27;
+    if(strcmp(cmd, "SENSOR|I2C_SCAN") == 0) return Command::SensorI2CScan;
+    if(strcmp(cmd, "SENSOR|BME280") == 0) return Command::SensorBme280;
+    if(strcmp(cmd, "SENSOR|DHT22") == 0) return Command::SensorDht22;
     return Command::Invalid;
 }
 }
