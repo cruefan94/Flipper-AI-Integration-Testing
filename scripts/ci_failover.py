@@ -25,6 +25,8 @@ MONITORED = (
 )
 WORKFLOW = "ci-fallback-verify.yml"
 MAX_AGE = timedelta(days=4)
+# Do not backfill failed development runs from before this owner-approved rule.
+POLICY_START = datetime(2026, 11, 14, 4, 50, tzinfo=timezone.utc)
 MAX_DISPATCHES = 3
 AGENT = "flipper-ai-public-ci-failover/1.0"
 FAILURES = {"failure", "timed_out", "startup_failure"}
@@ -67,6 +69,8 @@ def timestamp(text: str) -> datetime:
 def kind_for(repo: str, name: str) -> str:
     lower = name.lower()
     if repo == MONITORED[0]:
+        if "android" in lower and ("apk" in lower or "satellite" in lower):
+            return "android"
         if any(s in lower for s in ("flash candidate", "custom momentum", "build flipper ai", "firmware")):
             return "firmware"
         if any(s in lower for s in ("ai satellite", "gatt", "session", "ble", "protocol")):
@@ -104,7 +108,8 @@ def find_candidates(repo: str, runs: list[dict], now: datetime) -> list[dict]:
         if not finished or finished[0].get("conclusion") not in FAILURES:
             continue
         latest = finished[0]
-        if now - timestamp(latest["created_at"]) > MAX_AGE:
+        if (timestamp(latest["created_at"]) < POLICY_START or
+                now - timestamp(latest["created_at"]) > MAX_AGE):
             continue
         if len(finished) >= 2 and finished[1].get("conclusion") in FAILURES:
             candidates.append({
