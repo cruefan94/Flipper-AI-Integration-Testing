@@ -4,6 +4,8 @@ on:
   push:
     paths:
       - 'tests/test_ai1_contract.py'
+      - 'tests/test_virtual_ai1_session.py'
+      - 'tests/virtual_ai1_session.py'
       - '.github/workflows/ai1-contract.yml'
 permissions:
   contents: read
@@ -13,5 +15,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
-      - name: Verify public AI1 protocol fixtures
-        run: python3 -m unittest discover -s tests -p 'test_ai1_contract.py' -v
+      - name: Verify public AI1 protocol fixtures and virtual sessions
+        run: python3 -m unittest discover -s tests -p 'test_*ai1*.py' -v
+      - name: Verify virtual session adversarial cases
+        run: python3 -m unittest discover -s tests -p 'test_virtual_ai1_session.py' -v
