@@ -60,8 +60,10 @@ public final class BatteryMonitorSessionTest {
             "read only");
         check(session.nextPollAtMs() == thirdAt + 10 + BatteryMonitorSession.CONSERVE_INTERVAL_MS,
             "conserve cadence");
-        check(session.advice(thirdAt + 200000L).state == BatteryOptimizer.State.STALE_DATA,
-            "old sample marked stale");
+        check(session.advice(thirdAt + 300000L).state == BatteryOptimizer.State.LOW_BATTERY,
+            "five-minute cadence is still fresh");
+        check(session.advice(thirdAt + BatteryOptimizer.STALE_AFTER_MS + 11L).state ==
+            BatteryOptimizer.State.STALE_DATA, "old sample marked stale");
         long fourth = session.nextPollAtMs();
         check(session.beginPoll(4, fourth, true, true, false), "fourth poll");
         session.expireRequest(fourth + BatteryMonitorSession.RESPONSE_TIMEOUT_MS - 1);
