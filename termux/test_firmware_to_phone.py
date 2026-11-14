@@ -82,7 +82,7 @@ class NativeFirmwareTests(unittest.TestCase):
         command = args.args[0]
         self.assertEqual(command[-2:], ["-pass", "stdin"])
         self.assertNotIn("local-test-secret", " ".join(command))
-        self.assertEqual(args.kwargs["input"], "local-test-secret\\n".replace("\\\\", "\\"))
+        self.assertEqual(args.kwargs["input"], "local-test-secret\n")
 
     def test_visible_password_cannot_be_requested_noninteractively(self):
         with patch.object(module.sys.stdin, "isatty", return_value=False):
