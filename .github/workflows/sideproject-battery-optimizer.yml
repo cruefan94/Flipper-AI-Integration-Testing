@@ -42,6 +42,10 @@ jobs:
           /tmp/battery_service_test
           cc -std=c11 -Wall -Wextra -Werror -pedantic "$ROOT"/firmware_adapter/battery_telemetry.c "$ROOT"/firmware_adapter/battery_request.c "$ROOT"/tests/c/test_battery_protocol_stress.c -o /tmp/battery_protocol_stress
           /tmp/battery_protocol_stress
+          cc -std=c11 -Wall -Wextra -Werror -pedantic -I "$ROOT"/tests/c/fake_furi "$ROOT"/firmware_adapter/furi_battery_source.c "$ROOT"/tests/c/test_furi_battery_source.c -o /tmp/battery_furi_mock_test
+          /tmp/battery_furi_mock_test
+          cc -std=c11 -Wall -Wextra -Werror -pedantic -I "$ROOT"/tests/c/fake_furi "$ROOT"/firmware_adapter/battery_service.c "$ROOT"/firmware_adapter/battery_request.c "$ROOT"/firmware_adapter/battery_telemetry.c "$ROOT"/firmware_adapter/furi_battery_source.c "$ROOT"/tests/c/test_furi_service_integration.c -o /tmp/battery_furi_service_test
+          /tmp/battery_furi_service_test
       - name: Run Java-C-Java wire round-trip
         run: |
           ROOT=side_projects/flipper_ai_battery_optimizer
