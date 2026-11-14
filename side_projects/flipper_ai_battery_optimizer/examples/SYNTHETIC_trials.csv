@@ -1,0 +1,7 @@
+group,workload,duration_ms,start_pct,end_pct,charging,interrupted
+baseline,ble_idle,3600000,80,74,0,0
+baseline,ble_idle,3600000,81,75,0,0
+baseline,ble_idle,3600000,82,76,0,0
+candidate,ble_idle,3600000,80,75,0,0
+candidate,ble_idle,3600000,81,76,0,0
+candidate,ble_idle,3600000,82,77,0,0
