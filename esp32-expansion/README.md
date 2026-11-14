@@ -16,17 +16,17 @@ This standalone subproject is staged in the **public integration-testing reposit
 
 **Important:** USB-UART pins (RX0/TX0) on many DevKits are also electrically connected to the onboard CP2102/CH340 USB-to-serial bridge. An external Flipper TX can conflict with that bridge, even with USB used as power. Keep a working recovery path, disconnect any simultaneous USB serial host, and check exact board hardware before attempting a UART0 flash. Do not override a struggling pin with stronger drivers. If needed, isolate the onboard USB-UART TX connection or use a separate compatible power arrangement under an electronics technician's guidance.
 
-### Mode A — Firmware programming / ESP Flasher
+### Mode A — Firmware programming / upstream ESP Flasher (USART 13/14)
 
 | Flipper Zero LPUART | ESP32 DevKit V1 |
 | --- | --- |
-| Pin 15 / PC1 / TX | RX0 / GPIO3 |
-| Pin 16 / PC0 / RX | TX0 / GPIO1 |
+| Pin 13 / USART TX | RX0 / GPIO3 |
+| Pin 14 / USART RX | TX0 / GPIO1 |
 | Any ground e.g. pin 8 | GND |
 
-To enter ESP32 ROM download mode: hold **BOOT** (GPIO0 low), tap **EN/RESET**, release EN, then release BOOT after the flashing tool initiates communication (exact timing varies). Flash only board-matched images/offsets, and read back/verify as supported by the tool.
+The inspected upstream ESP Flasher version uses **FuriHalSerialIdUsart (pins 13/14)**, rather than the LPUART pins used by our manager. This may vary with fork/build; inspect the exact app before wiring.\n\nTo enter ESP32 ROM download mode: hold **BOOT** (GPIO0 low), tap **EN/RESET**, release EN, then release BOOT after the flashing tool initiates communication (exact timing varies). Flash only board-matched images/offsets, and read back/verify as supported by the tool.
 
-### Mode B — Normal ESP32 Manager runtime (recommended)
+### Mode B — Normal ESP32 Manager runtime (LPUART 15/16; recommended)
 
 | Flipper Zero LPUART | ESP32 DevKit V1 |
 | --- | --- |
@@ -34,7 +34,7 @@ To enter ESP32 ROM download mode: hold **BOOT** (GPIO0 low), tap **EN/RESET**, r
 | Pin 16 / PC0 / RX | TX2 / GPIO17 |
 | Any ground e.g. pin 8 | GND |
 
-The included ESP32 firmware uses `Serial2.begin(115200, SERIAL_8N1, 16, 17)` for the FZ1 commands. **After flashing, move only the two TX/RX wires from Mode A to Mode B.** Common GND stays connected. Future portable builds could use a correctly wired 2-pole selector with break-before-make contacts.
+The included ESP32 firmware uses `Serial2.begin(115200, SERIAL_8N1, 16, 17)` for the FZ1 commands. **After flashing, disconnect Flipper 13/14 from RX0/TX0 and connect Flipper 15/16 to RX2/TX2.** Common GND stays connected. Future portable builds can expose separate labeled PROGRAM (USART) and MANAGER (LPUART) headers. Never short UART drivers together.
 
 Both sides use **3.3V logic**. Never attach the 5V Arduino UART directly to Flipper. Keep the ESP32's USB power supply separate for initial bench setup; **do not connect Flipper 5V/3.3V rails to ESP32 VIN/3V3**. An external USB power bank can power the board for Mode B, but don't assume UART0 will be free from USB-serial contention in Mode A. LPUART is owned by one app at a time: exit Flipper AI before opening ESP32 Manager or ESP Flasher. Other ESP32 models may use different pins.
 
@@ -45,7 +45,7 @@ Both sides use **3.3V logic**. Never attach the 5V Arduino UART directly to Flip
 3. Build ESP32 Manager against the matching Flipper/Momentum SDK: `cd esp32-expansion/flipper && ufbt`. The public CI build uses official SDK only; a successful build cannot establish Momentum ABI compatibility.
 4. Install a **Momentum-compatible** upstream ESP Flasher FAP independently, and place the **correct board-matched** precompiled .bin files on the Flipper's SD card under `apps_data/esp_flasher/`. Follow upstream instructions for firmware / bootloader / partition placement and exact offsets. **Do not use guessed offsets or binaries**.
 5. Connect Mode A UART0 and validated separate power. Put the ESP32 into ROM download mode by its board-specific BOOT/EN procedure. Use ESP Flasher to flash, confirm write/verification, then reboot normally.
-6. Move TX/RX from Mode A to Mode B (RX2/TX2). Open ESP32 Manager on the Flipper; use Detect / Capabilities / Passive Wi-Fi scan. If LPUART is occupied, exit the other app first.
+6. Disconnect Mode A (Flipper 13/14, ESP RX0/TX0) and connect Mode B (Flipper 15/16, ESP RX2/TX2). Open ESP32 Manager on the Flipper; use Detect / Capabilities / Passive Wi-Fi scan. If LPUART is occupied, exit the other app first.
 7. Preserve the existing firmware and recovery backup. Never flash an ESP32 image to the Flipper itself.
 
 ## Protocol v1
