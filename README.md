@@ -29,3 +29,9 @@ A public GitHub Actions runner cannot automatically access the private firmware 
 - GitHub Actions runs the tests on push; success for this revision has not yet been observed.
 - This remains a standalone protocol fixture suite, **not** the Android application's JVM tests or APK compilation.
 - Next: use the public Android source repository to build a complete APK, and validate the private firmware BLE adapter only after source/license review.
+
+## Unified Flipper AI project coordination
+
+This repository is indexed in the [eight-repository Flipper AI ecosystem](https://github.com/cruefan94/Flipper-AI-Integration-Testing/blob/main/PROJECT_ECOSYSTEM.md). The [private project hub and future-ideas ledger](https://github.com/cruefan94/Flipper-AI-Momentum-/blob/main/docs/UNIFIED_PROJECT_HUB.md) records cross-repository priorities, dependencies, deferred concepts and testing boundaries (requires access to private repository).
+
+**Linking a repository does not merge its source or change its integration/approval rules.** Continue to honor this repository's own release, privacy and testing restrictions. The owner's primary ChatGPT project conversation is the coordination point, not an automated chat or GitHub syncing service.
