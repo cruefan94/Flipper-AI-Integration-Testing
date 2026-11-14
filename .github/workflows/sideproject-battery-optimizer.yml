@@ -24,7 +24,7 @@ jobs:
           ROOT=side_projects/flipper_ai_battery_optimizer
           mkdir -p /tmp/flipper-ai-battery-classes
           javac -Xlint:all -Werror -d /tmp/flipper-ai-battery-classes "$ROOT"/src/flipperai/battery/*.java "$ROOT"/tests/flipperai/battery/*.java
-          for suite in BatteryOptimizerTest BatteryTelemetryCodecTest BatteryMonitorSessionTest BatteryDischargeStudyTest BatteryRequestCodecTest BatteryReadTransportTest; do
+          for suite in BatteryOptimizerTest BatteryTelemetryCodecTest BatteryMonitorSessionTest BatteryDischargeStudyTest BatteryRequestCodecTest BatteryReadTransportTest BatteryProtocolRobustnessTest; do
             java -cp /tmp/flipper-ai-battery-classes flipperai.battery.$suite
           done
       - name: Compile and test standalone C power provider
@@ -36,6 +36,8 @@ jobs:
           /tmp/battery_request_test
           cc -std=c11 -Wall -Wextra -Werror -pedantic "$ROOT"/firmware_adapter/battery_service.c "$ROOT"/firmware_adapter/battery_request.c "$ROOT"/firmware_adapter/battery_telemetry.c "$ROOT"/tests/c/test_battery_service.c -o /tmp/battery_service_test
           /tmp/battery_service_test
+          cc -std=c11 -Wall -Wextra -Werror -pedantic "$ROOT"/firmware_adapter/battery_telemetry.c "$ROOT"/firmware_adapter/battery_request.c "$ROOT"/tests/c/test_battery_protocol_stress.c -o /tmp/battery_protocol_stress
+          /tmp/battery_protocol_stress
       - name: Run Java-C-Java wire round-trip
         run: |
           ROOT=side_projects/flipper_ai_battery_optimizer

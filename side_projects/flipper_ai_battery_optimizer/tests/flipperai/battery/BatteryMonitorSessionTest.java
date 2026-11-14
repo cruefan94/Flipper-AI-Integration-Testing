@@ -42,6 +42,8 @@ public final class BatteryMonitorSessionTest {
         check(immutable && session.history().size() == 1, "immutable history");
         check(session.nextPollAtMs() == 1010L + BatteryMonitorSession.NORMAL_INTERVAL_MS,
             "normal spacing");
+        check(!session.beginPoll(1, session.nextPollAtMs(), true, true, false),
+            "request ID cannot be reused during one trusted epoch");
         check(!session.beginPoll(2, 1020L, true, true, false), "prevent tight polling");
         long secondAt = session.nextPollAtMs();
         check(session.beginPoll(2, secondAt, true, true, false), "eligible scheduled poll");

@@ -21,6 +21,7 @@ public final class BatteryMonitorSession {
     private boolean trustedAndCapable;
     private boolean pending;
     private long pendingRequestId;
+    private long lastIssuedRequestId;
     private long pendingAtMs;
     private long nextPollAtMs;
     private int consecutiveFailures;
@@ -52,6 +53,7 @@ public final class BatteryMonitorSession {
         trustedAndCapable = false;
         pending = false;
         pendingRequestId = 0;
+        lastIssuedRequestId = 0;
         pendingAtMs = 0;
         nextPollAtMs = 0;
         consecutiveFailures = 0;
@@ -64,12 +66,14 @@ public final class BatteryMonitorSession {
      */
     public boolean beginPoll(long requestId, long nowMs, boolean userEnabled,
                              boolean appForeground, boolean hardwareBusy) {
-        if(nowMs < 0 || requestId < 1 || requestId > 0xffffffffL)
+        if(nowMs < 0 || requestId < 1 || requestId > 0xffffffffL ||
+           requestId <= lastIssuedRequestId)
             return false;
         if(!trustedAndCapable || !userEnabled || !appForeground ||
            hardwareBusy || pending || nowMs < nextPollAtMs)
             return false;
         pendingRequestId = requestId;
+        lastIssuedRequestId = requestId; // never reuse ID in this trusted connection epoch
         pendingAtMs = nowMs;
         pending = true;
         return true;
