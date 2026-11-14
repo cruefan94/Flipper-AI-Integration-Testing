@@ -89,6 +89,19 @@ class FailoverPolicyTest(unittest.TestCase):
     def test_unmapped_private_workflow_marked_diagnostic(self):
         self.assertEqual(module.kind_for(FW, "Other extra-app build"), "diagnostic")
 
+    def test_private_android_apk_verification_routes_public_android(self):
+        self.assertEqual(
+            module.kind_for(FW, "Android AI Satellite — APK verification"),
+            "android"
+        )
+
+    def test_pre_policy_historical_failures_not_redispatched(self):
+        # Starts at 04:50 UTC on November 14. Relative NOW in fixture is noon.
+        before_policy = NOW - timedelta(hours=8)
+        self.assertLess(before_policy, module.POLICY_START)
+        self.assertEqual(self.candidates(run(2, 8), run(1, 9)), [])
+
+
     def test_rerun_requires_confirmed_failed_previous_attempt(self):
         current = run(23, 1)
         current["run_attempt"] = 2
