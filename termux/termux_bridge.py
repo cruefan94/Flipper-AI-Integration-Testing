@@ -178,6 +178,12 @@ def approve(number):
           f"\nCommand:\n{task['args'].get('command', '')}\n")
     if input("Type YES to run this exact command locally: ") != "YES":
         raise SystemExit("Not approved.")
+    live = gh("GET", f"repos/{QUEUE}/issues/{number}")
+    if live.get("state") != "open" or parse_issue(live) != task:
+        raise SystemExit("Issue is no longer open or its contents have changed; refused.")
+    started = STATE / (str(number) + ".started")
+    if not claim(started):
+        raise SystemExit("Execution was already started; refusing to retry automatically.")
     try:
         answer = execute(task)
     except Exception as exc:
