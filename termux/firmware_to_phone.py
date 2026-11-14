@@ -212,7 +212,7 @@ def verify_delivery(path: Path) -> tuple[str, bytes, str]:
         raise DeliveryError(f"Could not verify firmware delivery: {exc}") from exc
 
 
-def save_candidate(destination: Path, filename: str, data: bytes) -> Path:
+def save_candidate(destination: Path, filename: str, data: bytes, *, private: bool = True) -> Path:
     if not NAME_RE.fullmatch(filename):
         raise DeliveryError("Unsafe output filename")
     destination.mkdir(mode=0o700, parents=True, exist_ok=True)
@@ -222,7 +222,8 @@ def save_candidate(destination: Path, filename: str, data: bytes) -> Path:
             return target
         target = destination / (filename[:-4] + "-" + sha256(data)[:12] + ".tgz")
     with target.open("xb") as stream:
-        os.chmod(target, 0o600)
+        if private:
+            os.chmod(target, 0o600)
         stream.write(data)
     return target
 
@@ -236,8 +237,8 @@ def main() -> int:
     print("Experimental AI Momentum F7 firmware. NOT hardware tested. No flashing will be performed.")
     print("Download requires authenticated GitHub CLI. Decryption happens only on this phone.")
     try:
-        shutil.which("openssl") or (_ for _ in ()).throw(
-            DeliveryError("OpenSSL is missing. Install the Termux openssl package."))
+        if shutil.which("openssl") is None:
+            raise DeliveryError("OpenSSL is missing. Install the Termux openssl package.")
         run_id, artifact_id = find_successful_run(args.run_id)
         print(f"Selected successful build {run_id}, encrypted artifact {artifact_id}.")
         work = Path.home() / "flipper-ai-workspace" / "firmware-updates"
@@ -262,7 +263,7 @@ def main() -> int:
                 downloads = Path.home() / "storage" / "downloads"
                 if not downloads.is_dir():
                     raise DeliveryError("Downloads access not granted. Run termux-setup-storage locally.")
-                shared = save_candidate(downloads / "FlipperAI_Firmware", filename, firmware)
+                shared = save_candidate(downloads / "FlipperAI_Firmware", filename, firmware, private=False)
                 print(f"Copied verified firmware to Android Downloads: {shared}")
         print("Candidate extracted and verified. Flipper firmware was NOT flashed.")
         print("Confirm backup/qFlipper recovery before attempting a physical device update.")
