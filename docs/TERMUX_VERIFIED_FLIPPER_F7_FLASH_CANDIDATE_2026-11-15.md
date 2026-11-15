@@ -101,7 +101,7 @@ If no `.tgz` appears, rerun the verifier and resolve its error; do **not** copy 
 find "$HOME/flipper-ai-preview" "$HOME/storage/downloads" -type f -name 'flipper-z-f7-update-*.tgz' -print 2>/dev/null
 ~~~
 
-**Default for future Flipper AI Termux extraction guides:** give one copy-friendly block at a time; show extraction/decryption progress and exact result; enable visible password paste *when the user specifically wants it* with the screen-privacy warning; automatically include verification plus the Downloads copy and locate steps.
+**Default for future Flipper AI Termux extraction guides:** give one copy-friendly block at a time; show extraction/decryption progress and exact result; use visible, paste-enabled password input as this project's requested default, with the screen-privacy warning and a hidden-input alternative; automatically include verification plus the Downloads copy and locate steps.
 
 ## Before *any* actual firmware flash
 
