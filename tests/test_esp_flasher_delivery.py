@@ -13,7 +13,7 @@ spec=importlib.util.spec_from_file_location(
     "esp_delivery",ROOT/"scripts/prepare_esp_flasher_delivery.py")
 pkg=importlib.util.module_from_spec(spec)
 spec.loader.exec_module(pkg)
-PATCH="4aa07f202a848d13320b8f938100fef361075186"
+PATCH="b23336cd70984daac99d05568504ebccef8c1698"
 MOMENTUM="d3f89dfe2ef6b01839201598e9be1590cba80322"
 PRIVATE_SOURCE="1234567890abcdef1234567890abcdef12345678"
 
