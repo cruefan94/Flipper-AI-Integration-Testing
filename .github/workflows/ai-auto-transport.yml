@@ -1,0 +1,17 @@
+name: AI transport policy checks
+on:
+  push:
+    branches: [test/ai-auto-transport-20261115]
+  workflow_dispatch:
+jobs:
+  native-policy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile and run transport policy tests
+        run: |
+          set -eu
+          cc -std=c11 -Wall -Wextra -Werror -Itests/auto_transport tests/auto_transport/test_policy.c -o /tmp/ai-policy-test
+          /tmp/ai-policy-test
+          cc -std=c11 -Wall -Wextra -Werror -Itests/auto_transport tests/auto_transport/test_manager.c -o /tmp/ai-manager-test
+          /tmp/ai-manager-test
