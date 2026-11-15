@@ -15,6 +15,7 @@ pkg=importlib.util.module_from_spec(spec)
 spec.loader.exec_module(pkg)
 PATCH="9a3adae719132d862ae9708bfd820c13b7e59abc"
 MOMENTUM="d3f89dfe2ef6b01839201598e9be1590cba80322"
+PRIVATE_SOURCE="1234567890abcdef1234567890abcdef12345678"
 
 class FlasherDeliveryTests(unittest.TestCase):
     def setUp(self):
@@ -29,7 +30,7 @@ class FlasherDeliveryTests(unittest.TestCase):
         self.output=self.root/"programmer.tar.gz"
 
     def pack(self):
-        return pkg.pack(self.fap,self.license,self.output,PATCH,MOMENTUM)
+        return pkg.pack(self.fap,self.license,self.output,PATCH,MOMENTUM,PRIVATE_SOURCE)
 
     def repack(self,mod):
         with tarfile.open(self.output,"r:gz") as tar:
@@ -51,6 +52,7 @@ class FlasherDeliveryTests(unittest.TestCase):
         self.assertEqual(result["upstream_revision"],pkg.UPSTREAM)
         self.assertEqual(result["patch_revision"],PATCH)
         self.assertEqual(result["momentum_revision"],MOMENTUM)
+        self.assertEqual(result["firmware_source_revision"],PRIVATE_SOURCE)
         self.assertTrue(result["hardware_unverified"])
         with tarfile.open(path) as tar:
             self.assertEqual({m.name for m in tar.getmembers()},pkg.NAMES)
@@ -60,6 +62,7 @@ class FlasherDeliveryTests(unittest.TestCase):
             source=tar.extractfile(pkg.SOURCE_INFO).read().decode()
             self.assertIn("GPL-3.0 source",source)
             self.assertIn(PATCH,source)
+            self.assertIn(PRIVATE_SOURCE,source)
             self.assertIn(pkg.UPSTREAM,source)
 
     def test_refuse_non_elf_or_bad_license_before_creating_package(self):
@@ -75,9 +78,11 @@ class FlasherDeliveryTests(unittest.TestCase):
 
     def test_refuse_overwrite_and_unpinned_source(self):
         with self.assertRaisesRegex(ValueError,"patch commit"):
-            pkg.pack(self.fap,self.license,self.output,"main",MOMENTUM)
+            pkg.pack(self.fap,self.license,self.output,"main",MOMENTUM,PRIVATE_SOURCE)
         with self.assertRaisesRegex(ValueError,"Momentum commit"):
-            pkg.pack(self.fap,self.license,self.output,PATCH,"latest")
+            pkg.pack(self.fap,self.license,self.output,PATCH,"latest",PRIVATE_SOURCE)
+        with self.assertRaisesRegex(ValueError,"private firmware source"):
+            pkg.pack(self.fap,self.license,self.output,PATCH,MOMENTUM,"branch-tip")
         self.pack()
         with self.assertRaisesRegex(ValueError,"overwrite"):
             self.pack()
