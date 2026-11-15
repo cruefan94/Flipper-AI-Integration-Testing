@@ -10,6 +10,7 @@ The Flipper Zero AI Momentum + Android AI Satellite project is coordinated as on
 | [Flipper-AI-Momentum-](https://github.com/cruefan94/Flipper-AI-Momentum-) | Private primary Momentum firmware, BLE AI1 and ESP32-S2 source, private project roadmap | No private source/secrets in public CI |
 | [Flipper-AI-Android-Satellite](https://github.com/cruefan94/Flipper-AI-Android-Satellite) | Android companion/APK and local/online/hybrid AI, BLE, voice and radio | App build/phone testing there |
 | [Flipper-AI-Integration-Testing](https://github.com/cruefan94/Flipper-AI-Integration-Testing) | This public-safe CI / integration contract workspace | Tests only; no automatic flashing or production release |
+| [Esp32-component-compatability-](https://github.com/cruefan94/Esp32-component-compatability-) | **Private**, separate ESP-WROOM-32/Arduino-compatible module catalog, safety profiles, sensor driver library and CI candidates ([draft PR #1](https://github.com/cruefan94/Esp32-component-compatability-/pull/1)) | Connected to Momentum [draft PR #13](https://github.com/cruefan94/Flipper-AI-Momentum-/pull/13) and ESP32 Expansion [PR #9](https://github.com/cruefan94/Flipper-AI-Integration-Testing/pull/9); no private source mirror or automatic merge |
 | [Flipper-AI-Battery-Optimizer](https://github.com/cruefan94/Flipper-AI-Battery-Optimizer) | Separate private battery read-only advice/telemetry prototype | Not integrated with live app/firmware; explicit approval needed |
 | [Flipper-AI-Civic-Companion.](https://github.com/cruefan94/Flipper-AI-Civic-Companion.) | Private future 2021 Civic / Galaxy A52 Android Auto experiment | Deferred until verified core; no main source changes |
 | [Flipper-AI-Mascot-Library](https://github.com/cruefan94/Flipper-AI-Mascot-Library) | Public optional approved AI Dolphin animation concept | New mascot work requires owner preview approval |
@@ -43,4 +44,4 @@ Private repository links may require authorization. Non-Flipper repositories are
 - **No false completion claims.** Record separate source, CI, phone, Flipper and end-to-end evidence.
 - Maintain separate repositories for side-project concepts until separately approved integration.
 
-For detailed internal roadmap and decision history, authorized collaborators can consult [the private project hub](https://github.com/cruefan94/Flipper-AI-Momentum-/blob/main/docs/UNIFIED_PROJECT_HUB.md). Reference this page from the other seven repositories to keep the ecosystem discoverable.
+For detailed internal roadmap and decision history, authorized collaborators can consult [the private project hub](https://github.com/cruefan94/Flipper-AI-Momentum-/blob/main/docs/UNIFIED_PROJECT_HUB.md). Reference this page from the other eight repositories to keep the ecosystem discoverable.
