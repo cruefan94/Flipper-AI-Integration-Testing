@@ -1,0 +1,27 @@
+name: Verify decrypted Flipper AI release candidates safely (synthetic only)
+
+on:
+  push:
+    branches:
+      - test/flipper-user-bundle-verifier-20261115
+    paths:
+      - 'hardware-installer/verify_user_flipper_bundle.py'
+      - 'tests/test_user_flipper_bundle_verifier.py'
+      - '.github/workflows/flipper-user-bundle-verifier.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verification:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check independent user verifier syntax
+        run: python3 -m py_compile hardware-installer/verify_user_flipper_bundle.py
+      - name: Test only public synthetic package fixtures
+        run: python3 -m unittest discover -s tests -p 'test_user_flipper_bundle_verifier.py' -v
+      - name: Preserve privacy boundary
+        run: echo "Only synthetic ZIPs generated on public CI. No firmware, passphrases, or devices accessed."
