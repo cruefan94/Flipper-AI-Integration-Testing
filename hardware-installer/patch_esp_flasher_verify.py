@@ -172,6 +172,75 @@ static int32_t esp_flasher_flash_bin(void* context) {""")
     return source
 
 
+
+def patch_target_checks(source):
+    """Verify ROM chip identity and actual SPI flash size BEFORE any erase."""
+    source=once(source,
+      "static esp_loader_error_t _flash_file(EspFlasherApp* app, char* filepath, uint32_t addr) {",
+      "static esp_loader_error_t _flash_file(EspFlasherApp* app, char* filepath, uint32_t addr, uint32_t capacity) {")
+    source=once(source,
+      '    loader_port_debug_print("Erasing flash...this may take a while\\n");',
+      """    /* Reject writes beyond the flash capacity reported by the target ROM.
+     * Never rely solely on the staged firmware image's text manifest. */
+    if(capacity == 0 || addr >= capacity || size > (uint64_t)(capacity - addr)) {
+        loader_port_debug_print("Firmware offset/size exceeds detected ESP flash. ABORT.\\n");
+        storage_file_close(bin_file);
+        storage_file_free(bin_file);
+        return ESP_LOADER_ERROR_IMAGE_SIZE;
+    }
+    loader_port_debug_print("Erasing flash...this may take a while\\n");""")
+    source=once(source,
+      "static bool _flash_all_files(EspFlasherApp* app) {",
+      "static bool _flash_all_files(EspFlasherApp* app, uint32_t capacity) {")
+    source=once(source,
+      "            err = _flash_file(app, item->path, item->addr);",
+      "            err = _flash_file(app, item->path, item->addr, capacity);")
+    source=once(source,
+      """        const bool operation_ok = is_switch ? switched_ok : _flash_all_files(app);""",
+      """        const bool operation_ok = is_switch ? switched_ok : _flash_all_files(app, actual_flash_size);""")
+    source=once(source,
+      """    err = esp_loader_connect(&connect_config);
+    if(err != ESP_LOADER_SUCCESS) {""",
+      """    err = esp_loader_connect(&connect_config);
+    uint32_t actual_flash_size = 0;
+    if(err == ESP_LOADER_SUCCESS) {
+        const target_chip_t rom_chip = esp_loader_get_target();
+        bool chip_ok = false;
+        if(app->selected_flash_options[SelectedFlashC5Mode]) {
+            chip_ok = rom_chip == ESP32C5_CHIP;
+        } else if(app->selected_flash_options[SelectedFlashS3Mode]) {
+            chip_ok = (rom_chip == ESP32S3_CHIP || rom_chip == ESP32C3_CHIP ||
+                       rom_chip == ESP32C6_CHIP);
+        } else {
+            /* Safe default for the owner's 38-pin ESP-WROOM-32 classic.
+             * S2 needs its own explicit chip-mode+flash-layout review. */
+            chip_ok = rom_chip == ESP32_CHIP;
+        }
+        if(!chip_ok) {
+            loader_port_debug_print("ESP ROM chip differs from selected board mode. NO FLASH.\\n");
+            err = ESP_LOADER_ERROR_INVALID_TARGET;
+        } else {
+            esp_loader_error_t size_status = esp_loader_flash_detect_size(&actual_flash_size);
+            if(size_status != ESP_LOADER_SUCCESS || actual_flash_size < 0x20000u) {
+                loader_port_debug_print("ESP flash size unavailable/invalid. NO FLASH.\\n");
+                err = ESP_LOADER_ERROR_IMAGE_SIZE;
+            } else {
+                char rom_report[112];
+                snprintf(rom_report, sizeof(rom_report),
+                         "ESP ROM chip=%u, flash capacity=%lu bytes.\\n",
+                         (unsigned)rom_chip, (unsigned long)actual_flash_size);
+                loader_port_debug_print(rom_report);
+            }
+        }
+    }
+    if(err != ESP_LOADER_SUCCESS) {""")
+    return source
+
+
+def patch_flasher_worker(source):
+    return patch_target_checks(patch_text(source))
+
+
 def patch_flash_confirmation(source):
     """Require a separate, positive on-device YES before writing image bytes."""
     return once(source,
@@ -272,7 +341,7 @@ def main():
     if sha!=UPSTREAM_SHA:
         parser.exit(2,"Unexpected upstream revision: refusing patch\n")
     transforms={
-        "esp_flasher_worker.c":patch_text,
+        "esp_flasher_worker.c":patch_flasher_worker,
         "scenes/esp_flasher_scene_browse.c":patch_flash_confirmation,
         "scenes/esp_flasher_scene_start.c":patch_switch_confirmation,
         "esp_flasher_app.c":patch_power_policy,
