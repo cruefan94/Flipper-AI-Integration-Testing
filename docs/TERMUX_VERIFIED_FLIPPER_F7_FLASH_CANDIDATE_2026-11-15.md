@@ -37,15 +37,26 @@ unzip "encrypted-FlipperAI-ESP32-COMPLETE-NEXT-FLASH-CANDIDATE-UNTESTED.zip"
 
 The extracted file should be named FlipperAI_ESP32_Complete_Flash_Candidate_UNTESTED.zip.enc.
 
-4. Decrypt with the SAME private passphrase used for the repository secret FLIPPER_ARTIFACT_PASSPHRASE. GitHub Secrets cannot show its saved value. **Never share the passphrase in a chat, command argument, screenshot or log.** OpenSSL will prompt for it privately.
+4. **Visible, paste-enabled passphrase input (user preference):** Use the same private `FLIPPER_ARTIFACT_PASSPHRASE` that encrypted the CI artifact. GitHub Secrets cannot show a previously saved value. The following commands visibly echo pasted input in Termux, rather than hiding it. **This is less private than hidden input:** anyone viewing your screen, screen recording, terminal scrollback or screenshot could read it. Use only somewhere private, never post the password, and clear the display afterward.
+
+Long-press the Termux input area and select **Paste**, or use the Android keyboard Clipboard button. Paste at the `Passphrase (VISIBLE):` prompt, then press Enter. The passphrase is supplied through stdin, **not** embedded in shell history or OpenSSL command arguments.
 
 ~~~sh
-openssl enc -d -aes-256-cbc -pbkdf2 -iter 250000 -salt \
-  -in "FlipperAI_ESP32_Complete_Flash_Candidate_UNTESTED.zip.enc" \
-  -out "FlipperAI_ESP32_Complete_Flash_Candidate_UNTESTED.zip"
+cd "$HOME/flipper-ai-preview"
+printf '%s\\n' 'Paste your encryption passphrase below (VISIBLE on screen).'
+IFS= read -r -p 'Passphrase (VISIBLE): ' FLIPPER_PASS
+if [ -z "$FLIPPER_PASS" ]; then
+  printf '%s\\n' 'Empty passphrase; stopping.'
+else
+  printf '%s\\n' "$FLIPPER_PASS" | openssl enc -d -aes-256-cbc -pbkdf2 -iter 250000 -salt \
+    -pass stdin \
+    -in "FlipperAI_ESP32_Complete_Flash_Candidate_UNTESTED.zip.enc" \
+    -out "FlipperAI_ESP32_Complete_Flash_Candidate_UNTESTED.zip"
+fi
+unset FLIPPER_PASS
 ~~~
 
-If decryption fails, stop. Do not flash any resulting incomplete file. An unavailable passphrase requires securely creating a new encrypted build with a new known passphrase.
+If decryption fails, stop. Delete the incomplete decrypted ZIP before retrying; **do not flash** a partially written file. If visible input isn't appropriate, the normal OpenSSL command without `-pass stdin` prompts privately with hidden input instead. An unavailable passphrase requires a fresh encrypted build using a known, securely held passphrase.
 
 5. Download the verified public source of the phone-side bundle validator and run it. It will check all contained files, pinned private revision, the F7 target and the updater manifest, then optionally extract ONLY the genuine Flipper native .tgz:
 
@@ -61,6 +72,36 @@ python3 verify_user_flipper_bundle.py \
 ~~~
 
 Expected: a VERIFIED output and one native Flipper update, named flipper-z-f7-update-*.tgz, under verified-flipper. The validator does not connect to or change a Flipper, ESP32, or Android app.
+
+6. **Always find, display and copy the verified native `.tgz` to Android Downloads** so it is visible in **Samsung My Files → Internal storage → Download**. Copying is an explicit step, not a firmware flash. The commands refuse an absent/multiple-file match and do not overwrite an existing same-name Downloads file:
+
+~~~sh
+termux-setup-storage
+shopt -s nullglob
+updates=( "$HOME"/flipper-ai-preview/verified-flipper/flipper-z-f7-update-*.tgz )
+if [ "${#updates[@]}" -ne 1 ]; then
+  printf '%s\\n' 'STOP: expected exactly one verified .tgz; see files below:'
+  find "$HOME/flipper-ai-preview" -maxdepth 3 -type f -name '*.tgz' -print
+else
+  src="${updates[0]}"
+  dest="$HOME/storage/downloads/$(basename "$src")"
+  if [ -e "$dest" ] || [ -L "$dest" ]; then
+    printf 'Already exists in Downloads (not overwritten): %s\\n' "$dest"
+  else
+    cp -- "$src" "$dest"
+    printf 'COPIED TO ANDROID DOWNLOADS: %s\\n' "$dest"
+  fi
+  ls -lh -- "$src" "$dest"
+fi
+~~~
+
+If no `.tgz` appears, rerun the verifier and resolve its error; do **not** copy a similarly named encrypted or unverified file. Show this final location command after **every future Termux extraction**:
+
+~~~sh
+find "$HOME/flipper-ai-preview" "$HOME/storage/downloads" -type f -name 'flipper-z-f7-update-*.tgz' -print 2>/dev/null
+~~~
+
+**Default for future Flipper AI Termux extraction guides:** give one copy-friendly block at a time; show extraction/decryption progress and exact result; enable visible password paste *when the user specifically wants it* with the screen-privacy warning; automatically include verification plus the Downloads copy and locate steps.
 
 ## Before *any* actual firmware flash
 
