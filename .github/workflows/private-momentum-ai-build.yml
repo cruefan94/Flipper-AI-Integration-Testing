@@ -11,6 +11,8 @@ on:
   push:
     paths:
       - '.github/workflows/private-momentum-ai-build.yml'
+      - 'scripts/prepare_unified_esp32_release.py'
+      - 'tests/test_unified_esp32_release.py'
 permissions:
   contents: read
 jobs:
