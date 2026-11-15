@@ -74,12 +74,25 @@ class SafetyUIPatchTests(unittest.TestCase):
         with self.assertRaises(PatchMismatch):
             patch_power_policy(POWER.replace("attempts++ < 5","attempts++ < 20"))
 
+    def test_real_rom_chip_and_capacity_checked_before_erase(self):
+        source=(Path(__file__).resolve().parents[1]/"patch_esp_flasher_verify.py").read_text()
+        self.assertIn("def patch_target_checks(source):",source)
+        self.assertIn("rom_chip = esp_loader_get_target()",source)
+        self.assertIn("esp_loader_flash_detect_size(&actual_flash_size)",source)
+        self.assertIn("chip_ok = rom_chip == ESP32_CHIP",source)
+        self.assertIn("ESP32S3_CHIP",source)
+        self.assertIn("ESP32C5_CHIP",source)
+        self.assertIn("if(capacity == 0 || addr >= capacity",source)
+        self.assertIn("size > (uint64_t)(capacity - addr)",source)
+        self.assertIn("ESP_LOADER_ERROR_IMAGE_SIZE",source)
+        self.assertIn("_flash_all_files(app, actual_flash_size)",source)
+
     def test_patch_is_computed_before_writing_any_files(self):
         code=(Path(__file__).resolve().parents[1]/"patch_esp_flasher_verify.py").read_text()
         self.assertLess(code.index("changes[path]=transform(path.read_text())"),
                         code.index("path.write_text(patched)"))
         self.assertIn('sha!=UPSTREAM_SHA',code)
-        self.assertIn('"esp_flasher_worker.c":patch_text',code)
+        self.assertIn('"esp_flasher_worker.c":patch_flasher_worker',code)
         self.assertIn('"scenes/esp_flasher_scene_browse.c":patch_flash_confirmation',code)
         self.assertIn('"scenes/esp_flasher_scene_start.c":patch_switch_confirmation',code)
         self.assertIn('"esp_flasher_app.c":patch_power_policy',code)
