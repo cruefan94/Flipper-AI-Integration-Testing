@@ -104,6 +104,75 @@ jobs:
           python3 -m unittest discover -s tests -p 'test_esp32_main_integration.py' -v
           python3 -m unittest discover -s tests -p 'test_esp32_autodetect_profiles.py' -v
           python3 -m unittest discover -s tests -p 'test_esp32_sd_firmware_plan.py' -v
+      - name: Validate private ESP32 component source and Momentum sensor menu
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/private-ai"
+          test -f esp32_component_compat/INTEGRATION_LOCK.md
+          python3 esp32_component_compat/scripts/check_compat.py
+          python3 -m unittest discover -s esp32_component_compat/tests -p 'test_*.py' -v
+          python3 -m unittest discover -s tests -p 'test_esp32_sensor_preload.py' -v
+          python3 -m unittest discover -s tests -p 'test_esp32_component_cross_repo.py' -v
+          echo 'Private component catalog and Flipper FZ1 menu contracts passed.'
+      - name: Compile pinned ESP-WROOM-32 component compatibility reference
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install --user platformio >/dev/null
+          export PATH="$HOME/.local/bin:$PATH"
+          pio run -d "$RUNNER_TEMP/private-ai/esp32_component_compat/firmware_example" \
+            -e esp32dev >"$RUNNER_TEMP/esp32-component-build-private.log" 2>&1 || {
+              echo '::error::Classic ESP32 component firmware build failed. Private compiler output remains on temporary runner.'
+              exit 1
+            }
+          output="$RUNNER_TEMP/private-ai/esp32_component_compat/firmware_example/.pio/build/esp32dev"
+          for bin in firmware.bin bootloader.bin partitions.bin; do test -s "$output/$bin"; done
+          echo 'Classic ESP32 WROOM-32 reference firmware compiled; NOT board flash verified.'
+      - name: Hash, encrypt and roundtrip-check separate ESP32 component candidate
+        env:
+          DELIVERY_PASSPHRASE: ${{ secrets.FLIPPER_ARTIFACT_PASSPHRASE }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          src="$RUNNER_TEMP/private-ai/esp32_component_compat/firmware_example/.pio/build/esp32dev"
+          stage="$RUNNER_TEMP/esp32-component-stage"
+          mkdir -p "$stage"
+          for f in firmware.bin bootloader.bin partitions.bin; do cp "$src/$f" "$stage/$f"; done
+          printf '%s\n' \
+            "SOURCE_REVISION=$(git -C "$RUNNER_TEMP/private-ai" rev-parse HEAD)" \
+            'BOARD_TARGET=esp32dev (provisional classic ESP-WROOM-32)' \
+            'COMPATIBILITY=Source/CI candidate only; chip flash capacity and partition offsets not validated.' \
+            'MOMENTUM=Flipper ESP32 Manager is separately compiled in the same candidate; no automatic board flash.' \
+            'RESTRICTION=Not for ESP32-S2, Arduino Uno, or any unverified board.' \
+            > "$stage/READ_FIRST.txt"
+          (cd "$stage" && sha256sum firmware.bin bootloader.bin partitions.bin READ_FIRST.txt > SHA256SUMS.txt)
+          (cd "$stage" && sha256sum -c SHA256SUMS.txt)
+          tar -C "$stage" -czf "$RUNNER_TEMP/esp32-components-UNTESTED.tar.gz" \
+            firmware.bin bootloader.bin partitions.bin READ_FIRST.txt SHA256SUMS.txt
+          openssl enc -aes-256-cbc -pbkdf2 -iter 250000 -salt \
+            -in "$RUNNER_TEMP/esp32-components-UNTESTED.tar.gz" \
+            -out "$RUNNER_TEMP/esp32-components-UNTESTED.tar.gz.enc" \
+            -pass env:DELIVERY_PASSPHRASE
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 250000 -salt \
+            -in "$RUNNER_TEMP/esp32-components-UNTESTED.tar.gz.enc" \
+            -out "$RUNNER_TEMP/esp32-components-roundtrip.tar.gz" \
+            -pass env:DELIVERY_PASSPHRASE
+          cmp "$RUNNER_TEMP/esp32-components-UNTESTED.tar.gz" \
+            "$RUNNER_TEMP/esp32-components-roundtrip.tar.gz"
+          tar -tzf "$RUNNER_TEMP/esp32-components-roundtrip.tar.gz" | grep -Fxq 'firmware.bin'
+          rm -rf "$stage"
+          rm -f "$RUNNER_TEMP/esp32-components-UNTESTED.tar.gz" \
+            "$RUNNER_TEMP/esp32-components-roundtrip.tar.gz"
+          echo 'Only the encrypted ESP32 component candidate remains for delivery.'
+      - name: Upload encrypted ESP32 component candidate only
+        uses: actions/upload-artifact@v4
+        with:
+          name: encrypted-esp32-wroom32-component-compat-NOT-HARDWARE-VERIFIED
+          path: ${{ runner.temp }}/esp32-components-UNTESTED.tar.gz.enc
+          if-no-files-found: error
+          retention-days: 7
       - name: Apply AI source overlays
         run: |
           set -euo pipefail
