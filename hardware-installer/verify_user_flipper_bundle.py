@@ -34,7 +34,7 @@ REGULAR = {
     "Docs/ESP_Flasher_INSTALL_WARNING.txt",
 }
 HEX40 = re.compile(r"^[a-f0-9]{40}$")
-F7_NAME = re.compile(r"^Flipper_Update/(flipper-z-f7-update-[A-Za-z0-9._-]+\\.tgz)$")
+F7_NAME = re.compile(r"^Flipper_Update/(flipper-z-f7-update-[A-Za-z0-9._-]+\.tgz)$")
 
 
 def require(condition: bool, message: str) -> None:
@@ -93,7 +93,7 @@ def verify(bundle: Path, expected_source: str | None = None) -> tuple[str, dict]
                 path = PurePosixPath(member.filename)
                 unix_type = (member.external_attr >> 16) & 0o170000
                 require(member.file_size <= MAX_MEMBER_SIZE and not member.is_dir() and
-                        not member.filename.startswith("/") and "\\\\" not in member.filename and
+                        not member.filename.startswith("/") and "\\" not in member.filename and
                         ".." not in path.parts and "." not in path.parts and
                         unix_type != 0o120000, "Unsafe ZIP member")
             flipper = [n for n in names if F7_NAME.fullmatch(n)]
@@ -127,11 +127,11 @@ def verify(bundle: Path, expected_source: str | None = None) -> tuple[str, dict]
                         record.get("sha256") == hashlib.sha256(z.read(name)).hexdigest(),
                         "SHA256 or size mismatch: " + name)
             verify_f7_native(z.read(flipper[0]))
-            require(z.read("SD_CARD/apps/GPIO/esp_flasher.fap").startswith(b"\\x7fELF"),
+            require(z.read("SD_CARD/apps/GPIO/esp_flasher.fap").startswith(b"\x7fELF"),
                     "Missing compiled ESP programmer FAP")
-            require(z.read("ESP32_WROOM32/firmware.bin").startswith(b"\\xe9"),
+            require(z.read("ESP32_WROOM32/firmware.bin").startswith(b"\xe9"),
                     "Invalid classic ESP32 firmware header")
-            require(z.read("ESP32_WROOM32/bootloader.bin").startswith(b"\\xe9"),
+            require(z.read("ESP32_WROOM32/bootloader.bin").startswith(b"\xe9"),
                     "Invalid classic ESP32 bootloader header")
             require(b"GNU GENERAL PUBLIC LICENSE" in
                     z.read("Licenses/ESP_Flasher_GPL-3.0.txt").upper(),
@@ -178,7 +178,7 @@ def main() -> None:
                     raise
             print("Verified native .tgz extracted (NOT flashed):", target)
     except ValueError as exc:
-        p.exit(2, "VERIFICATION FAILED: " + str(exc) + "\\n")
+        p.exit(2, "VERIFICATION FAILED: " + str(exc) + "\n")
 
 
 if __name__ == "__main__":
