@@ -1,0 +1,55 @@
+name: ESP Flasher GPL safety patch exact-source compatibility
+on:
+  push:
+    paths:
+      - 'hardware-installer/patch_esp_flasher_verify.py'
+      - 'hardware-installer/tests/test_flasher_*.py'
+      - '.github/workflows/esp-flasher-source-patch-compat.yml'
+  pull_request:
+    paths:
+      - 'hardware-installer/patch_esp_flasher_verify.py'
+      - 'hardware-installer/tests/test_flasher_*.py'
+      - '.github/workflows/esp-flasher-source-patch-compat.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source-compat:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test deterministic GPL patch and explicit flash safety
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile hardware-installer/patch_esp_flasher_verify.py
+          python3 -m unittest discover -s hardware-installer/tests -p 'test_flasher_*.py' -v
+      - name: Fetch exact reviewed GPL upstream source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --quiet --depth 1 https://github.com/0xchocolate/flipperzero-esp-flasher.git /tmp/upstream-flasher
+          PIN="1f6f801c3ebecbc4afbf6500564bf99748710e24"
+          test "$(git -C /tmp/upstream-flasher rev-parse HEAD)" = "$PIN"
+          grep -qi 'GNU GENERAL PUBLIC LICENSE' /tmp/upstream-flasher/LICENSE
+      - name: Apply all exact-source checks, confirmation dialogs and safe power policy
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 hardware-installer/patch_esp_flasher_verify.py /tmp/upstream-flasher
+          grep -q 'err = esp_loader_flash_verify();' /tmp/upstream-flasher/esp_flasher_worker.c
+          grep -q 'FLASH FAILED / UNVERIFIED' /tmp/upstream-flasher/esp_flasher_worker.c
+          grep -q 'CONFIRM ESP FLASH' /tmp/upstream-flasher/scenes/esp_flasher_scene_browse.c
+          grep -q 'CONFIRM OTA WRITE' /tmp/upstream-flasher/scenes/esp_flasher_scene_start.c
+          ! grep -q 'furi_hal_power_enable_otg' /tmp/upstream-flasher/esp_flasher_app.c
+          ! grep -q 'furi_hal_power_disable_otg' /tmp/upstream-flasher/esp_flasher_app.c
+      - name: Confirm second patch application refuses unreviewed source
+        shell: bash
+        run: |
+          set -euo pipefail
+          if python3 hardware-installer/patch_esp_flasher_verify.py /tmp/upstream-flasher; then
+            echo "::error::Safety patch unexpectedly succeeded twice"
+            exit 1
+          fi
+          echo "Exact GPL upstream source patched once; unapproved repeat edits refused."
