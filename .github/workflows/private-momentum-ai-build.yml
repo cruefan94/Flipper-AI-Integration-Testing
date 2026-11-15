@@ -43,6 +43,7 @@ jobs:
           set -euo pipefail
           python3 -m unittest discover -s tests -p 'test_momentum_flash_package.py' -v
           python3 -m unittest discover -s tests -p 'test_esp_flasher_delivery.py' -v
+          python3 -m unittest discover -s tests -p 'test_unified_esp32_release.py' -v
       - name: Fetch private AI source without persisting credentials
         env:
           PRIVATE_TOKEN: ${{ secrets.FLIPPER_PRIVATE_SOURCE_TOKEN }}
@@ -306,6 +307,55 @@ jobs:
         with:
           name: encrypted-flipper-ai-esp32-integration-preview-tgz-UNTESTED
           path: ${{ runner.temp }}/flipper-ai-native-tgz-delivery.tar.gz.enc
+          if-no-files-found: error
+          retention-days: 7
+      - name: Compose one encrypted ESP32 + Momentum next-flash release candidate
+        shell: bash
+        env:
+          DELIVERY_PASSPHRASE: ${{ secrets.FLIPPER_ARTIFACT_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p "$RUNNER_TEMP/esp32-unified-private"
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 250000 -salt \
+            -in "$RUNNER_TEMP/flipper-ai-native-tgz-delivery.tar.gz.enc" \
+            -out "$RUNNER_TEMP/esp32-unified-private/flipper.tar.gz" \
+            -pass env:DELIVERY_PASSPHRASE
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 250000 -salt \
+            -in "$RUNNER_TEMP/esp32-programmer-UNTESTED.tar.gz.enc" \
+            -out "$RUNNER_TEMP/esp32-unified-private/programmer.tar.gz" \
+            -pass env:DELIVERY_PASSPHRASE
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 250000 -salt \
+            -in "$RUNNER_TEMP/esp32-components-UNTESTED.tar.gz.enc" \
+            -out "$RUNNER_TEMP/esp32-unified-private/components.tar.gz" \
+            -pass env:DELIVERY_PASSPHRASE
+          python3 scripts/prepare_unified_esp32_release.py pack \
+            --firmware "$RUNNER_TEMP/esp32-unified-private/flipper.tar.gz" \
+            --flasher "$RUNNER_TEMP/esp32-unified-private/programmer.tar.gz" \
+            --esp32 "$RUNNER_TEMP/esp32-unified-private/components.tar.gz" \
+            --out "$RUNNER_TEMP/esp32-unified-private/FlipperAI_ESP32_Complete_Flash_Candidate_UNTESTED.zip"
+          python3 scripts/prepare_unified_esp32_release.py verify \
+            --archive "$RUNNER_TEMP/esp32-unified-private/FlipperAI_ESP32_Complete_Flash_Candidate_UNTESTED.zip"
+          openssl enc -aes-256-cbc -pbkdf2 -iter 250000 -salt \
+            -in "$RUNNER_TEMP/esp32-unified-private/FlipperAI_ESP32_Complete_Flash_Candidate_UNTESTED.zip" \
+            -out "$RUNNER_TEMP/FlipperAI_ESP32_Complete_Flash_Candidate_UNTESTED.zip.enc" \
+            -pass env:DELIVERY_PASSPHRASE
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 250000 -salt \
+            -in "$RUNNER_TEMP/FlipperAI_ESP32_Complete_Flash_Candidate_UNTESTED.zip.enc" \
+            -out "$RUNNER_TEMP/esp32-unified-private/unified-verify.zip" \
+            -pass env:DELIVERY_PASSPHRASE
+          cmp "$RUNNER_TEMP/esp32-unified-private/unified-verify.zip" \
+            "$RUNNER_TEMP/esp32-unified-private/FlipperAI_ESP32_Complete_Flash_Candidate_UNTESTED.zip"
+          python3 scripts/prepare_unified_esp32_release.py verify \
+            --archive "$RUNNER_TEMP/esp32-unified-private/unified-verify.zip"
+          rm -rf "$RUNNER_TEMP/esp32-unified-private"
+          test -s "$RUNNER_TEMP/FlipperAI_ESP32_Complete_Flash_Candidate_UNTESTED.zip.enc"
+          echo 'Three version-matched release components packaged and encrypted; NO device writes.'
+      - name: Upload encrypted all-in-one ESP32 + Momentum flash candidate only
+        uses: actions/upload-artifact@v4
+        with:
+          name: encrypted-FlipperAI-ESP32-COMPLETE-NEXT-FLASH-CANDIDATE-UNTESTED
+          path: ${{ runner.temp }}/FlipperAI_ESP32_Complete_Flash_Candidate_UNTESTED.zip.enc
           if-no-files-found: error
           retention-days: 7
       - name: Report verified scope without publishing private binaries
