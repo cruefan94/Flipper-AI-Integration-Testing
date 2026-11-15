@@ -19,7 +19,8 @@ static inline bool ai_board_parse(const char* line,AiBoardIdentity* out){
  else if(len==3&&strncmp(caps,"BLE",3)==0)bits|=AI_BOARD_CAP_BLE;
  else if(len==4&&strncmp(caps,"GPIO",4)==0)bits|=AI_BOARD_CAP_GPIO;
  else if(len==6&&strncmp(caps,"SENSOR",6)==0)bits|=AI_BOARD_CAP_SENSOR;
- if(!end)break;caps=end+1;}
+ if(!end) break;
+ caps=end+1;}
  out->kind=kind;out->capabilities=bits;return true;
 }
 #endif
