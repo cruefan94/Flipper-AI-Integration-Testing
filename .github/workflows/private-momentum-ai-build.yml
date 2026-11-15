@@ -201,7 +201,8 @@ jobs:
             --license "$RUNNER_TEMP/esp-flasher-upstream/LICENSE" \
             --out "$RUNNER_TEMP/esp32-programmer-UNTESTED.tar.gz" \
             --patch-revision 9a3adae719132d862ae9708bfd820c13b7e59abc \
-            --momentum-revision "$(git -C "$RUNNER_TEMP/momentum-fw" rev-parse HEAD)"
+            --momentum-revision "$(git -C "$RUNNER_TEMP/momentum-fw" rev-parse HEAD)" \
+            --firmware-source-revision "$(git -C "$RUNNER_TEMP/private-ai" rev-parse HEAD)"
           python3 scripts/prepare_esp_flasher_delivery.py verify \
             --archive "$RUNNER_TEMP/esp32-programmer-UNTESTED.tar.gz"
           openssl enc -aes-256-cbc -pbkdf2 -iter 250000 -salt \
