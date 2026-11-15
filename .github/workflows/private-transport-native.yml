@@ -45,8 +45,11 @@ jobs:
             --branch feature/ai-transport-failclosed-20261115 \
             https://github.com/cruefan94/Flipper-AI-Momentum-.git \
             "$RUNNER_TEMP/private-transport"
+          # Re-fetch pinned SHA even if newer hourly commits move the branch head.
+          git -C "$RUNNER_TEMP/private-transport" fetch --quiet --depth 1 origin "59e060099cdad84bb36980c19f6f1391194b0b2f"
+          git -C "$RUNNER_TEMP/private-transport" checkout --quiet --detach "59e060099cdad84bb36980c19f6f1391194b0b2f"
           test "$(git -C "$RUNNER_TEMP/private-transport" rev-parse HEAD)" = \
-            "da09aeec150f066c4803348ce44238c689c41011" || {
+            "59e060099cdad84bb36980c19f6f1391194b0b2f" || {
               echo "::error::Private source revision changed. Review and explicitly pin a new SHA before continuing."
               exit 1
             }
