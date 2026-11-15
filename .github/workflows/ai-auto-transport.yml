@@ -17,3 +17,5 @@ jobs:
           /tmp/ai-manager-test
           cc -std=c11 -Wall -Wextra -Werror -Itests/auto_transport tests/auto_transport/test_manual_fail_closed.c -o /tmp/ai-manual-test
           /tmp/ai-manual-test
+          cc -std=c11 -Wall -Wextra -Werror -Itests/auto_transport tests/auto_transport/test_board_link.c -o /tmp/ai-board-test
+          /tmp/ai-board-test
