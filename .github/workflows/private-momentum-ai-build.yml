@@ -147,7 +147,7 @@ jobs:
           # Fetch a reviewable GPL-3.0 patch at an immutable public commit;
           # the patched app must verify chip MD5 after writing each image.
           curl -fLsS \
-            "https://raw.githubusercontent.com/cruefan94/Flipper-AI-Integration-Testing/4aa07f202a848d13320b8f938100fef361075186/hardware-installer/patch_esp_flasher_verify.py" \
+            "https://raw.githubusercontent.com/cruefan94/Flipper-AI-Integration-Testing/b23336cd70984daac99d05568504ebccef8c1698/hardware-installer/patch_esp_flasher_verify.py" \
             -o "$RUNNER_TEMP/patch_esp_flasher_verify.py"
           python3 "$RUNNER_TEMP/patch_esp_flasher_verify.py" "$RUNNER_TEMP/esp-flasher-upstream"
           grep -q "err = esp_loader_flash_verify();" "$RUNNER_TEMP/esp-flasher-upstream/esp_flasher_worker.c"
@@ -200,7 +200,7 @@ jobs:
             --fap "$RUNNER_TEMP/esp_flasher.fap" \
             --license "$RUNNER_TEMP/esp-flasher-upstream/LICENSE" \
             --out "$RUNNER_TEMP/esp32-programmer-UNTESTED.tar.gz" \
-            --patch-revision 4aa07f202a848d13320b8f938100fef361075186 \
+            --patch-revision b23336cd70984daac99d05568504ebccef8c1698 \
             --momentum-revision "$(git -C "$RUNNER_TEMP/momentum-fw" rev-parse HEAD)" \
             --firmware-source-revision "$(git -C "$RUNNER_TEMP/private-ai" rev-parse HEAD)"
           python3 scripts/prepare_esp_flasher_delivery.py verify \
