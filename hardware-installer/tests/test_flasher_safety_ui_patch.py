@@ -72,7 +72,7 @@ class SafetyUIPatchTests(unittest.TestCase):
         with self.assertRaises(PatchMismatch):
             patch_switch_confirmation(START.replace("SwitchToFirmwareB","DifferentFirmware"))
         with self.assertRaises(PatchMismatch):
-            patch_power_policy(POWER.replace("attempts < 5","attempts < 20"))
+            patch_power_policy(POWER.replace("attempts++ < 5","attempts++ < 20"))
 
     def test_patch_is_computed_before_writing_any_files(self):
         code=(Path(__file__).resolve().parents[1]/"patch_esp_flasher_verify.py").read_text()
