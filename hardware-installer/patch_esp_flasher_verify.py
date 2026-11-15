@@ -171,6 +171,94 @@ static int32_t esp_flasher_flash_bin(void* context) {""")
         }""")
     return source
 
+
+def patch_flash_confirmation(source):
+    """Require a separate, positive on-device YES before writing image bytes."""
+    return once(source,
+      """        if(app->num_selected_flash_options) {
+            // only start next scene if at least one option is selected
+            scene_manager_next_scene(app->scene_manager, EspFlasherSceneConsoleOutput);
+        }""",
+      """        if(app->num_selected_flash_options) {
+            /* A browse-menu selection is not yet approval to overwrite flash. */
+            DialogMessage* confirm = dialog_message_alloc();
+            dialog_message_set_header(
+                confirm, "CONFIRM ESP FLASH", 64, 0, AlignCenter, AlignTop);
+            dialog_message_set_text(
+                confirm,
+                "Check chip + offsets\\nExternal USB power\\nOverwrite flash now?",
+                64, 15, AlignCenter, AlignTop);
+            dialog_message_set_buttons(confirm, "Cancel", NULL, "FLASH");
+            DialogMessageButton choice = dialog_message_show(app->dialogs, confirm);
+            dialog_message_free(confirm);
+            if(choice == DialogMessageButtonRight) {
+                scene_manager_next_scene(app->scene_manager, EspFlasherSceneConsoleOutput);
+            }
+        }""")
+
+
+def patch_switch_confirmation(source):
+    """OTA slot writes also need affirmative consent, not just a menu click."""
+    source=once(source,
+      "void esp_flasher_scene_start_on_enter(void* context) {",
+      """static bool flipper_ai_confirm_ota_write(EspFlasherApp* app, const char* question) {
+    DialogMessage* confirm = dialog_message_alloc();
+    dialog_message_set_header(
+        confirm, "CONFIRM OTA WRITE", 64, 0, AlignCenter, AlignTop);
+    dialog_message_set_text(confirm, question, 64, 15, AlignCenter, AlignTop);
+    dialog_message_set_buttons(confirm, "Cancel", NULL, "WRITE");
+    DialogMessageButton choice = dialog_message_show(app->dialogs, confirm);
+    dialog_message_free(confirm);
+    return choice == DialogMessageButtonRight;
+}
+
+void esp_flasher_scene_start_on_enter(void* context) {""")
+    source=once(source,
+      """        } else if(event.event == SubmenuIndexEspFlasherSwitchA) {
+            app->switch_fw = SwitchToFirmwareA;
+            scene_manager_next_scene(app->scene_manager, EspFlasherSceneConsoleOutput);
+            consumed = true;""",
+      """        } else if(event.event == SubmenuIndexEspFlasherSwitchA) {
+            if(flipper_ai_confirm_ota_write(app, "Write A\\nOTA boot flags?")) {
+                app->switch_fw = SwitchToFirmwareA;
+                scene_manager_next_scene(app->scene_manager, EspFlasherSceneConsoleOutput);
+            }
+            consumed = true;""")
+    source=once(source,
+      """        } else if(event.event == SubmenuIndexEspFlasherSwitchB) {
+            app->switch_fw = SwitchToFirmwareB;
+            scene_manager_next_scene(app->scene_manager, EspFlasherSceneConsoleOutput);
+            consumed = true;""",
+      """        } else if(event.event == SubmenuIndexEspFlasherSwitchB) {
+            if(flipper_ai_confirm_ota_write(app, "Write B\\nOTA boot flags?")) {
+                app->switch_fw = SwitchToFirmwareB;
+                scene_manager_next_scene(app->scene_manager, EspFlasherSceneConsoleOutput);
+            }
+            consumed = true;""")
+    return source
+
+
+def patch_power_policy(source):
+    """External USB ESP32: do not auto-enable potentially conflicting 5 V OTG."""
+    source=once(source,
+      """    uint8_t attempts = 0;
+    bool otg_was_enabled = furi_hal_power_is_otg_enabled();
+    while(!furi_hal_power_is_otg_enabled() && attempts++ < 5) {
+        furi_hal_power_enable_otg();
+        furi_delay_ms(10);
+    }
+    furi_delay_ms(200);""",
+      """    /* Flipper AI: ESP32 initially uses external USB power, shared GND and
+     * 3.3 V UART. Opening the programmer never changes Flipper OTG power.
+     * Confirm the onboard USB-UART bridge is not electrically contending. */""")
+    source=once(source,
+      """    if(furi_hal_power_is_otg_enabled() && !otg_was_enabled) {
+        furi_hal_power_disable_otg();
+    }""",
+      """    /* No Flipper OTG power state changes were made by this app. */""")
+    return source
+
+
 def main():
     parser=argparse.ArgumentParser(description="GPL ESP Flasher MD5 verification patch only")
     parser.add_argument("checkout",type=Path)
@@ -183,12 +271,24 @@ def main():
                                  text=True).strip()
     if sha!=UPSTREAM_SHA:
         parser.exit(2,"Unexpected upstream revision: refusing patch\n")
-    path=root/"esp_flasher_worker.c"
-    if path.is_symlink() or not path.is_file():
-        parser.exit(2,"Flasher worker source missing or symlinked\n")
-    try:patched=patch_text(path.read_text())
-    except PatchMismatch as exc:parser.exit(2,str(exc)+"\n")
-    path.write_text(patched)
-    print("Applied GPL-licensed Flipper AI flash MD5 verification patch at",sha)
+    transforms={
+        "esp_flasher_worker.c":patch_text,
+        "scenes/esp_flasher_scene_browse.c":patch_flash_confirmation,
+        "scenes/esp_flasher_scene_start.c":patch_switch_confirmation,
+        "esp_flasher_app.c":patch_power_policy,
+    }
+    changes={}
+    try:
+        for relative,transform in transforms.items():
+            path=root/relative
+            if path.is_symlink() or not path.is_file():
+                raise PatchMismatch("Missing or symlinked source: "+relative)
+            changes[path]=transform(path.read_text())
+    except PatchMismatch as exc:
+        parser.exit(2,str(exc)+"\n")
+    # Compute every exact-anchor source transform before writing any file.
+    for path,patched in changes.items():
+        path.write_text(patched)
+    print("Applied pinned GPL ESP Flasher MD5 + confirmation + safe-power patch:",sha)
 
 if __name__=="__main__":main()
