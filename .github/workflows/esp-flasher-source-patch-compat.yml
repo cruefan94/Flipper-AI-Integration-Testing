@@ -39,6 +39,9 @@ jobs:
           set -euo pipefail
           python3 hardware-installer/patch_esp_flasher_verify.py /tmp/upstream-flasher
           grep -q 'err = esp_loader_flash_verify();' /tmp/upstream-flasher/esp_flasher_worker.c
+          grep -q 'esp_loader_get_target()' /tmp/upstream-flasher/esp_flasher_worker.c
+          grep -q 'esp_loader_flash_detect_size(&actual_flash_size)' /tmp/upstream-flasher/esp_flasher_worker.c
+          grep -q 'size > (uint64_t)(capacity - addr)' /tmp/upstream-flasher/esp_flasher_worker.c
           grep -q 'FLASH FAILED / UNVERIFIED' /tmp/upstream-flasher/esp_flasher_worker.c
           grep -q 'CONFIRM ESP FLASH' /tmp/upstream-flasher/scenes/esp_flasher_scene_browse.c
           grep -q 'CONFIRM OTA WRITE' /tmp/upstream-flasher/scenes/esp_flasher_scene_start.c
