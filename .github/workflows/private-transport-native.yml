@@ -1,10 +1,10 @@
 # Compiles the ACTUAL PRIVATE transport branch on a public CI runner.
 # Private code and compiler output never become public artifacts or logs.
-name: Private Flipper AI transport source — isolated native checks
+name: Unified ESP32 BLE Transport private-source integration checks
 
 on:
   push:
-    branches: [test/private-transport-native-ci-20261115]
+    branches: [test/unified-esp32-transport-native-20261115]
     paths:
       - '.github/workflows/private-transport-native.yml'
   workflow_dispatch:
@@ -42,14 +42,14 @@ jobs:
           chmod 600 "$HOME/.netrc"
           trap 'rm -f "$HOME/.netrc"' EXIT
           git -c credential.helper= -c http.extraheader= clone --quiet --depth 1 \
-            --branch feature/ai-transport-failclosed-20261115 \
+            --branch integration/esp32-ble-transport-v01-20261115 \
             https://github.com/cruefan94/Flipper-AI-Momentum-.git \
             "$RUNNER_TEMP/private-transport"
           # Re-fetch pinned SHA even if newer hourly commits move the branch head.
-          git -C "$RUNNER_TEMP/private-transport" fetch --quiet --depth 1 origin "59e060099cdad84bb36980c19f6f1391194b0b2f"
-          git -C "$RUNNER_TEMP/private-transport" checkout --quiet --detach "59e060099cdad84bb36980c19f6f1391194b0b2f"
+          git -C "$RUNNER_TEMP/private-transport" fetch --quiet --depth 1 origin "5501cb9b9205a87bec79e7810103a4757a8bb665"
+          git -C "$RUNNER_TEMP/private-transport" checkout --quiet --detach "5501cb9b9205a87bec79e7810103a4757a8bb665"
           test "$(git -C "$RUNNER_TEMP/private-transport" rev-parse HEAD)" = \
-            "59e060099cdad84bb36980c19f6f1391194b0b2f" || {
+            "5501cb9b9205a87bec79e7810103a4757a8bb665" || {
               echo "::error::Private source revision changed. Review and explicitly pin a new SHA before continuing."
               exit 1
             }
@@ -78,15 +78,17 @@ jobs:
             tests/ai_actual_source_native_test.c -o "$OUT/actual-ubsan"
           run_guarded "$OUT/actual-ubsan"
           run_guarded cc -std=c11 -O1 -g -Wall -Wextra -Werror -pedantic \
-            -Iapplications_user/flipper_ai tests/ai_transport_manager_test.c \
+            -Iflipper_app tests/ai_transport_manager_test.c \
             -o "$OUT/manager"
           run_guarded "$OUT/manager"
           run_guarded cc -std=c11 -O1 -g -Wall -Wextra -Werror -pedantic \
             -fsanitize=undefined -fno-sanitize-recover=all \
-            -Iapplications_user/flipper_ai tests/ai_transport_manager_test.c \
+            -Iflipper_app tests/ai_transport_manager_test.c \
             -o "$OUT/manager-ubsan"
           run_guarded "$OUT/manager-ubsan"
-          echo "Pinned private-source native tests + UBSan passed. No firmware compiled or flashed."
+          run_guarded python3 -m unittest discover -s tests -p 'test_unified_transport_esp32.py' -v
+          run_guarded python3 -m unittest discover -s tests -p 'test_esp32_main_integration.py' -v
+          echo "Pinned unified ESP32 + BLE source, installer and transport tests passed (no flash)."
       - name: Checkout public integration test harness
         uses: actions/checkout@v4
         with:
