@@ -11,6 +11,8 @@ on:
   push:
     paths:
       - '.github/workflows/private-momentum-ai-build.yml'
+      - 'scripts/prepare_unified_esp32_release.py'
+      - 'tests/test_unified_esp32_release.py'
 permissions:
   contents: read
 jobs:
@@ -38,8 +40,12 @@ jobs:
         uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - name: Test native updater packaging with synthetic fixtures
-        run: python3 -m unittest discover -s tests -p 'test_momentum_flash_package.py' -v
+      - name: Test firmware and GPL programmer delivery using public synthetic fixtures
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -p 'test_momentum_flash_package.py' -v
+          python3 -m unittest discover -s tests -p 'test_esp_flasher_delivery.py' -v
+          python3 -m unittest discover -s tests -p 'test_unified_esp32_release.py' -v
       - name: Fetch private AI source without persisting credentials
         env:
           PRIVATE_TOKEN: ${{ secrets.FLIPPER_PRIVATE_SOURCE_TOKEN }}
@@ -101,6 +107,78 @@ jobs:
           python3 -m unittest discover -s tests -p 'test_esp32_main_integration.py' -v
           python3 -m unittest discover -s tests -p 'test_esp32_autodetect_profiles.py' -v
           python3 -m unittest discover -s tests -p 'test_esp32_sd_firmware_plan.py' -v
+      - name: Validate private ESP32 component source and Momentum sensor menu
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/private-ai"
+          test -f esp32_component_compat/INTEGRATION_LOCK.md
+          python3 esp32_component_compat/scripts/check_compat.py
+          python3 -m unittest discover -s esp32_component_compat/tests -p 'test_*.py' -v
+          python3 -m unittest discover -s tests -p 'test_esp32_sensor_preload.py' -v
+          python3 -m unittest discover -s tests -p 'test_esp32_component_cross_repo.py' -v
+          echo 'Private component catalog and Flipper FZ1 menu contracts passed.'
+      - name: Compile pinned ESP-WROOM-32 component compatibility reference
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install --user platformio >/dev/null
+          export PATH="$HOME/.local/bin:$PATH"
+          pio run -d "$RUNNER_TEMP/private-ai/esp32_component_compat/firmware_example" \
+            -e esp32dev >"$RUNNER_TEMP/esp32-component-build-private.log" 2>&1 || {
+              echo '::error::Classic ESP32 component firmware build failed. Private compiler output remains on temporary runner.'
+              exit 1
+            }
+          output="$RUNNER_TEMP/private-ai/esp32_component_compat/firmware_example/.pio/build/esp32dev"
+          for bin in firmware.bin bootloader.bin partitions.bin; do test -s "$output/$bin"; done
+          echo 'Classic ESP32 WROOM-32 reference firmware compiled; NOT board flash verified.'
+      - name: Hash, encrypt and roundtrip-check separate ESP32 component candidate
+        env:
+          DELIVERY_PASSPHRASE: ${{ secrets.FLIPPER_ARTIFACT_PASSPHRASE }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          src="$RUNNER_TEMP/private-ai/esp32_component_compat/firmware_example/.pio/build/esp32dev"
+          stage="$RUNNER_TEMP/esp32-component-stage"
+          mkdir -p "$stage"
+          for f in firmware.bin bootloader.bin partitions.bin; do cp "$src/$f" "$stage/$f"; done
+          printf '%s\n' \
+            "SOURCE_REVISION=$(git -C "$RUNNER_TEMP/private-ai" rev-parse HEAD)" \
+            'BOARD_TARGET=esp32dev (provisional classic ESP-WROOM-32)' \
+            'COMPATIBILITY=Source/CI candidate only; chip flash capacity and partition offsets not validated.' \
+            'MOMENTUM=Flipper ESP32 Manager is separately compiled in the same candidate; no automatic board flash.' \
+            'RESTRICTION=Not for ESP32-S2, Arduino Uno, or any unverified board.' \
+            > "$stage/READ_FIRST.txt"
+          (cd "$stage" && sha256sum firmware.bin bootloader.bin partitions.bin READ_FIRST.txt > SHA256SUMS.txt)
+          (cd "$stage" && sha256sum -c SHA256SUMS.txt)
+          tar -C "$stage" -czf "$RUNNER_TEMP/esp32-components-UNTESTED.tar.gz" \
+            firmware.bin bootloader.bin partitions.bin READ_FIRST.txt SHA256SUMS.txt
+          openssl enc -aes-256-cbc -pbkdf2 -iter 250000 -salt \
+            -in "$RUNNER_TEMP/esp32-components-UNTESTED.tar.gz" \
+            -out "$RUNNER_TEMP/esp32-components-UNTESTED.tar.gz.enc" \
+            -pass env:DELIVERY_PASSPHRASE
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 250000 -salt \
+            -in "$RUNNER_TEMP/esp32-components-UNTESTED.tar.gz.enc" \
+            -out "$RUNNER_TEMP/esp32-components-roundtrip.tar.gz" \
+            -pass env:DELIVERY_PASSPHRASE
+          cmp "$RUNNER_TEMP/esp32-components-UNTESTED.tar.gz" \
+            "$RUNNER_TEMP/esp32-components-roundtrip.tar.gz"
+          # Avoid grep -q closing tar's stdout early under pipefail (SIGPIPE).
+          tar -tzf "$RUNNER_TEMP/esp32-components-roundtrip.tar.gz" \
+            > "$RUNNER_TEMP/esp32-component-members.txt"
+          grep -Fx 'firmware.bin' "$RUNNER_TEMP/esp32-component-members.txt" >/dev/null
+          rm -rf "$stage"
+          rm -f "$RUNNER_TEMP/esp32-components-UNTESTED.tar.gz" \
+            "$RUNNER_TEMP/esp32-components-roundtrip.tar.gz"
+          echo 'Only the encrypted ESP32 component candidate remains for delivery.'
+      - name: Upload encrypted ESP32 component candidate only
+        uses: actions/upload-artifact@v4
+        with:
+          name: encrypted-esp32-wroom32-component-compat-NOT-HARDWARE-VERIFIED
+          path: ${{ runner.temp }}/esp32-components-UNTESTED.tar.gz.enc
+          if-no-files-found: error
+          retention-days: 7
       - name: Apply AI source overlays
         run: |
           set -euo pipefail
@@ -144,7 +222,7 @@ jobs:
           # Fetch a reviewable GPL-3.0 patch at an immutable public commit;
           # the patched app must verify chip MD5 after writing each image.
           curl -fLsS \
-            "https://raw.githubusercontent.com/cruefan94/Flipper-AI-Integration-Testing/9a3adae719132d862ae9708bfd820c13b7e59abc/hardware-installer/patch_esp_flasher_verify.py" \
+            "https://raw.githubusercontent.com/cruefan94/Flipper-AI-Integration-Testing/b23336cd70984daac99d05568504ebccef8c1698/hardware-installer/patch_esp_flasher_verify.py" \
             -o "$RUNNER_TEMP/patch_esp_flasher_verify.py"
           python3 "$RUNNER_TEMP/patch_esp_flasher_verify.py" "$RUNNER_TEMP/esp-flasher-upstream"
           grep -q "err = esp_loader_flash_verify();" "$RUNNER_TEMP/esp-flasher-upstream/esp_flasher_worker.c"
@@ -155,8 +233,10 @@ jobs:
           FAP_PATH="$(find "$RUNNER_TEMP/momentum-fw" -name esp_flasher.fap -type f -print -quit)"
           test -n "$FAP_PATH"
           test -s "$FAP_PATH"
-          echo "Upstream ESP Flasher GPL-3.0 source built against the exact pinned custom Momentum SDK."
-          echo "Compiled FAP is intentionally NOT uploaded; no physical API compatibility claimed."
+          cp "$FAP_PATH" "$RUNNER_TEMP/esp_flasher.fap"
+          test -s "$RUNNER_TEMP/esp_flasher.fap"
+          echo "Patched GPL ESP Flasher built against the pinned custom Momentum SDK."
+          echo "FAP will be bundled separately WITH GPL/source provenance, encrypted and UNTESTED."
       - name: Verify native Momentum .tgz and encrypt phone-ready package
         env:
           DELIVERY_PASSPHRASE: ${{ secrets.FLIPPER_ARTIFACT_PASSPHRASE }}
@@ -184,6 +264,46 @@ jobs:
             --archive "$RUNNER_TEMP/firmware-delivery/roundtrip.tar.gz"
           rm -rf "$RUNNER_TEMP/firmware-delivery"
           echo "Native Momentum F7 .tgz validated, encrypted, and plaintext removed."
+      - name: Create and roundtrip-verify separate encrypted GPL ESP programmer package
+        env:
+          DELIVERY_PASSPHRASE: ${{ secrets.FLIPPER_ARTIFACT_PASSPHRASE }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          python3 scripts/prepare_esp_flasher_delivery.py pack \
+            --fap "$RUNNER_TEMP/esp_flasher.fap" \
+            --license "$RUNNER_TEMP/esp-flasher-upstream/LICENSE" \
+            --out "$RUNNER_TEMP/esp32-programmer-UNTESTED.tar.gz" \
+            --patch-revision b23336cd70984daac99d05568504ebccef8c1698 \
+            --momentum-revision "$(git -C "$RUNNER_TEMP/momentum-fw" rev-parse HEAD)" \
+            --firmware-source-revision "$(git -C "$RUNNER_TEMP/private-ai" rev-parse HEAD)"
+          python3 scripts/prepare_esp_flasher_delivery.py verify \
+            --archive "$RUNNER_TEMP/esp32-programmer-UNTESTED.tar.gz"
+          openssl enc -aes-256-cbc -pbkdf2 -iter 250000 -salt \
+            -in "$RUNNER_TEMP/esp32-programmer-UNTESTED.tar.gz" \
+            -out "$RUNNER_TEMP/esp32-programmer-UNTESTED.tar.gz.enc" \
+            -pass env:DELIVERY_PASSPHRASE
+          test -s "$RUNNER_TEMP/esp32-programmer-UNTESTED.tar.gz.enc"
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 250000 -salt \
+            -in "$RUNNER_TEMP/esp32-programmer-UNTESTED.tar.gz.enc" \
+            -out "$RUNNER_TEMP/programmer-roundtrip.tar.gz" \
+            -pass env:DELIVERY_PASSPHRASE
+          cmp "$RUNNER_TEMP/esp32-programmer-UNTESTED.tar.gz" \
+              "$RUNNER_TEMP/programmer-roundtrip.tar.gz"
+          python3 scripts/prepare_esp_flasher_delivery.py verify \
+            --archive "$RUNNER_TEMP/programmer-roundtrip.tar.gz"
+          rm -f "$RUNNER_TEMP/esp32-programmer-UNTESTED.tar.gz" \
+                "$RUNNER_TEMP/programmer-roundtrip.tar.gz" \
+                "$RUNNER_TEMP/esp_flasher.fap"
+          echo "Only encrypted GPL programmer artifact retained; no installed Flipper app."
+      - name: Upload encrypted GPL ESP Flasher FAP + license/source provenance
+        uses: actions/upload-artifact@v4
+        with:
+          name: encrypted-esp32-programmer-momentum-sdk-GPL-UNTESTED
+          path: ${{ runner.temp }}/esp32-programmer-UNTESTED.tar.gz.enc
+          if-no-files-found: error
+          retention-days: 7
       - name: Upload encrypted firmware package only
         uses: actions/upload-artifact@v4
         with:
@@ -191,7 +311,56 @@ jobs:
           path: ${{ runner.temp }}/flipper-ai-native-tgz-delivery.tar.gz.enc
           if-no-files-found: error
           retention-days: 7
+      - name: Compose one encrypted ESP32 + Momentum next-flash release candidate
+        shell: bash
+        env:
+          DELIVERY_PASSPHRASE: ${{ secrets.FLIPPER_ARTIFACT_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p "$RUNNER_TEMP/esp32-unified-private"
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 250000 -salt \
+            -in "$RUNNER_TEMP/flipper-ai-native-tgz-delivery.tar.gz.enc" \
+            -out "$RUNNER_TEMP/esp32-unified-private/flipper.tar.gz" \
+            -pass env:DELIVERY_PASSPHRASE
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 250000 -salt \
+            -in "$RUNNER_TEMP/esp32-programmer-UNTESTED.tar.gz.enc" \
+            -out "$RUNNER_TEMP/esp32-unified-private/programmer.tar.gz" \
+            -pass env:DELIVERY_PASSPHRASE
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 250000 -salt \
+            -in "$RUNNER_TEMP/esp32-components-UNTESTED.tar.gz.enc" \
+            -out "$RUNNER_TEMP/esp32-unified-private/components.tar.gz" \
+            -pass env:DELIVERY_PASSPHRASE
+          python3 scripts/prepare_unified_esp32_release.py pack \
+            --firmware "$RUNNER_TEMP/esp32-unified-private/flipper.tar.gz" \
+            --flasher "$RUNNER_TEMP/esp32-unified-private/programmer.tar.gz" \
+            --esp32 "$RUNNER_TEMP/esp32-unified-private/components.tar.gz" \
+            --out "$RUNNER_TEMP/esp32-unified-private/FlipperAI_ESP32_Complete_Flash_Candidate_UNTESTED.zip"
+          python3 scripts/prepare_unified_esp32_release.py verify \
+            --archive "$RUNNER_TEMP/esp32-unified-private/FlipperAI_ESP32_Complete_Flash_Candidate_UNTESTED.zip"
+          openssl enc -aes-256-cbc -pbkdf2 -iter 250000 -salt \
+            -in "$RUNNER_TEMP/esp32-unified-private/FlipperAI_ESP32_Complete_Flash_Candidate_UNTESTED.zip" \
+            -out "$RUNNER_TEMP/FlipperAI_ESP32_Complete_Flash_Candidate_UNTESTED.zip.enc" \
+            -pass env:DELIVERY_PASSPHRASE
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 250000 -salt \
+            -in "$RUNNER_TEMP/FlipperAI_ESP32_Complete_Flash_Candidate_UNTESTED.zip.enc" \
+            -out "$RUNNER_TEMP/esp32-unified-private/unified-verify.zip" \
+            -pass env:DELIVERY_PASSPHRASE
+          cmp "$RUNNER_TEMP/esp32-unified-private/unified-verify.zip" \
+            "$RUNNER_TEMP/esp32-unified-private/FlipperAI_ESP32_Complete_Flash_Candidate_UNTESTED.zip"
+          python3 scripts/prepare_unified_esp32_release.py verify \
+            --archive "$RUNNER_TEMP/esp32-unified-private/unified-verify.zip"
+          rm -rf "$RUNNER_TEMP/esp32-unified-private"
+          test -s "$RUNNER_TEMP/FlipperAI_ESP32_Complete_Flash_Candidate_UNTESTED.zip.enc"
+          echo 'Three version-matched release components packaged and encrypted; NO device writes.'
+      - name: Upload encrypted all-in-one ESP32 + Momentum flash candidate only
+        uses: actions/upload-artifact@v4
+        with:
+          name: encrypted-FlipperAI-ESP32-COMPLETE-NEXT-FLASH-CANDIDATE-UNTESTED
+          path: ${{ runner.temp }}/FlipperAI_ESP32_Complete_Flash_Candidate_UNTESTED.zip.enc
+          if-no-files-found: error
+          retention-days: 7
       - name: Report verified scope without publishing private binaries
         run: |
           echo "Custom AI Momentum firmware compiled; native mobile F7 .tgz checked."
-          echo "Only encrypted delivery artifact uploaded, not plaintext firmware or private source; physical flash untested."
+          echo "Only two ENCRYPTED development artifacts uploaded: native updater and separately licensed GPL Flasher FAP. Neither installed on hardware."
