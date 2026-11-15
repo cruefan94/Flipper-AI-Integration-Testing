@@ -87,6 +87,79 @@ jobs:
             -o "$OUT/manager-ubsan"
           run_guarded "$OUT/manager-ubsan"
           echo "Pinned private-source native tests + UBSan passed. No firmware compiled or flashed."
+      - name: Checkout public integration test harness
+        uses: actions/checkout@v4
+        with:
+          path: public-tests
+          persist-credentials: false
+      - name: Checkout pinned public Android BLE candidate
+        uses: actions/checkout@v4
+        with:
+          repository: cruefan94/Flipper-AI-Android-Satellite
+          ref: c8ba436e19b7a78f05a3e7b12b77cfc3dc258a91
+          path: android-candidate
+          persist-credentials: false
+      - name: Set up JDK 17 for C-to-Android AI1 host exchange
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Compile and execute private AI1 wire, client, and link tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          cd "$RUNNER_TEMP/private-transport"
+          LOG="$RUNNER_TEMP/private-native-compiler.log"
+          OUT="$RUNNER_TEMP/private-native-tests"
+          mkdir -p "$OUT"
+          run_guarded() {
+            if ! "$@" >"$LOG" 2>&1; then
+              echo "::error::Real private-source AI1 native test failed; private diagnostics retained only in temporary runner storage."
+              return 1
+            fi
+          }
+          SOURCES=flipper_app/satellite_protocol
+          TESTS=tests/native
+          run_guarded cc -std=c11 -O1 -g -Wall -Wextra -Werror -pedantic \
+            -fsanitize=undefined -fno-sanitize-recover=all \
+            "$SOURCES/ai_wire.c" "$TESTS/ai_wire_test.c" -o "$OUT/wire"
+          run_guarded "$OUT/wire"
+          run_guarded cc -std=c11 -O1 -g -Wall -Wextra -Werror -pedantic \
+            -fsanitize=undefined -fno-sanitize-recover=all \
+            "$SOURCES/ai_wire.c" "$SOURCES/ai_client.c" \
+            "$TESTS/ai_client_test.c" -o "$OUT/client"
+          run_guarded "$OUT/client"
+          run_guarded cc -std=c11 -O1 -g -Wall -Wextra -Werror -pedantic \
+            -fsanitize=undefined -fno-sanitize-recover=all \
+            "$SOURCES/ai_wire.c" "$SOURCES/ai_client.c" \
+            "$SOURCES/ai_link.c" "$TESTS/ai_link_test.c" -o "$OUT/link"
+          run_guarded "$OUT/link"
+          echo "Actual private AI1 wire/client/link native tests passed (UBSan)."
+      - name: Check current private Momentum ↔ pinned Android BLE contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          LOG="$RUNNER_TEMP/private-crossrepo.log"
+          if ! python3 "$GITHUB_WORKSPACE/public-tests/scripts/check_cross_repository_gatt.py" \
+            "$RUNNER_TEMP/private-transport" "$GITHUB_WORKSPACE/android-candidate" \
+            >"$LOG" 2>&1; then
+            echo "::error::Cross-repository GATT contract mismatch; no private source content exported."
+            exit 1
+          fi
+          echo "Pinned Momentum and Android GATT UUID, MTU, and authenticated profile contract match."
+      - name: Execute private Flipper C ↔ public Android Java AI1 HELLO and ASK
+        shell: bash
+        run: |
+          set -euo pipefail
+          LOG="$RUNNER_TEMP/private-crossrepo.log"
+          if ! python3 "$GITHUB_WORKSPACE/public-tests/scripts/run_cross_repository_ai1.py" \
+            "$RUNNER_TEMP/private-transport" "$GITHUB_WORKSPACE/android-candidate" \
+            >"$LOG" 2>&1; then
+            echo "::error::Cross-repository AI1 host exchange failed; private test output remains ephemeral."
+            exit 1
+          fi
+          echo "Private Momentum C and Android Satellite Java completed AI1 HELLO/ASK host exchange."
       - name: Destroy temporary private source and test binaries
         if: always()
         shell: bash
@@ -94,5 +167,6 @@ jobs:
           rm -rf "$RUNNER_TEMP/private-transport" \
             "$RUNNER_TEMP/private-native-tests" \
             "$RUNNER_TEMP/private-native-compiler.log" \
-            "$RUNNER_TEMP/.netrc"
+            "$RUNNER_TEMP/.netrc" \
+            "$RUNNER_TEMP/private-crossrepo.log"
           echo "Temporary private files deleted. No artifacts uploaded."
