@@ -3,7 +3,7 @@
 
 Takes three ALREADY VERIFIED plaintext development packages on an ephemeral
 private build runner, checks source/SDK pairings, and generates a hash-verified
-ZIP for PASSHPRASE ENCRYPTION. Never uploads plaintext, performs a flash,
+ZIP for PASSPHRASE ENCRYPTION. Never uploads plaintext, performs a flash,
 writes a Flipper SD card or auto-installs the external GPL application.
 """
 from __future__ import annotations
@@ -124,7 +124,7 @@ def build(firmware: Path, flasher: Path, esp32: Path, output: Path) -> Path:
         "Docs/ESP_Flasher_INSTALL_WARNING.txt": flasher_files["READ_ME_BEFORE_INSTALL.txt"],
     }
     readme = (
-        "FLIPPER AI + ESP32 COMPONENT COMPATIBILITY — UNTESTED RELEASE CANDIDATE\n\n"
+        "FLIPPER AI + ESP32 COMPONENT COMPATIBILITY - UNTESTED RELEASE CANDIDATE\n\n"
         "This is NOT one flashable image. Different chips require separate firmware.\n"
         "Step 1: Verify device and retain a known-good Momentum/qFlipper recovery image.\n"
         "Step 2: Flipper_Update/*.tgz is ONLY for a compatible Flipper Zero F7 firmware updater.\n"
