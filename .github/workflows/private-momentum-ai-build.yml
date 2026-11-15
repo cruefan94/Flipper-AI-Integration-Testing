@@ -161,7 +161,10 @@ jobs:
             -pass env:DELIVERY_PASSPHRASE
           cmp "$RUNNER_TEMP/esp32-components-UNTESTED.tar.gz" \
             "$RUNNER_TEMP/esp32-components-roundtrip.tar.gz"
-          tar -tzf "$RUNNER_TEMP/esp32-components-roundtrip.tar.gz" | grep -Fxq 'firmware.bin'
+          # Avoid grep -q closing tar's stdout early under pipefail (SIGPIPE).
+          tar -tzf "$RUNNER_TEMP/esp32-components-roundtrip.tar.gz" \
+            > "$RUNNER_TEMP/esp32-component-members.txt"
+          grep -Fx 'firmware.bin' "$RUNNER_TEMP/esp32-component-members.txt" >/dev/null
           rm -rf "$stage"
           rm -f "$RUNNER_TEMP/esp32-components-UNTESTED.tar.gz" \
             "$RUNNER_TEMP/esp32-components-roundtrip.tar.gz"
