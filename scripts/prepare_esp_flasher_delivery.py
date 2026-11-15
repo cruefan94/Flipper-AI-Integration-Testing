@@ -39,7 +39,7 @@ def _read(path,limit):
 
 
 def _validate_fap(blob):
-    if not 128<=len(blob)<=MAX_FAP_BYTES or not blob.startswith(b"\\x7fELF"):
+    if not 128<=len(blob)<=MAX_FAP_BYTES or not blob.startswith(b"\x7fELF"):
         raise ValueError("Missing or invalid compiled ESP Flasher ELF/FAP")
 
 
@@ -109,22 +109,22 @@ def pack(fap,license_path,output,patch_revision,momentum_revision):
         raise ValueError("Expected immutable patch commit SHA")
     if not isinstance(momentum_revision,str) or len(momentum_revision)!=40 or any(x not in "0123456789abcdef" for x in momentum_revision):
         raise ValueError("Expected immutable custom Momentum commit SHA")
-    notice=("ESP32 PROGRAMMER — DEVELOPMENT ONLY — NOT HARDWARE TESTED\\n"
-            "Install esp_flasher.fap separately through an approved Flipper SD app method.\\n"
-            "This archive is NOT a Momentum .tgz and MUST NOT be flashed as firmware.\\n"
-            "The FAP needs the EXACT SDK used for the custom Momentum firmware build.\\n"
-            "Only use with the actual ESP-WROOM-32 chip confirmed and safe 3.3V UART wiring.\\n"
-            "Firmware erasure/programming needs separate on-device confirmation.\\n"
-            "Verify actual board model, ROM chip ID, flash capacity and .bin offsets.\\n"
-            "Check USB-to-UART contention and maintain BOOT/EN and qFlipper recovery.\\n"
-            "Never connect an Uno R3 5V UART directly to Flipper GPIO.\\n"
-            "Keep the current Flipper firmware unchanged until physical validation.\\n").encode()
-    provenance=(f"GPL-3.0 source: https://github.com/0xchocolate/flipperzero-esp-flasher\\n"
-                f"Pinned upstream commit: {UPSTREAM}\\n"
-                f"Published patch source: https://github.com/cruefan94/Flipper-AI-Integration-Testing/blob/{patch_revision}/hardware-installer/patch_esp_flasher_verify.py\\n"
-                f"Exact public patch commit: {patch_revision}\\n"
-                f"Custom Momentum pin: {momentum_revision}\\n"
-                "Any redistribution must comply with GPL-3.0 and provide corresponding source.\\n").encode()
+    notice=("ESP32 PROGRAMMER — DEVELOPMENT ONLY — NOT HARDWARE TESTED\n"
+            "Install esp_flasher.fap separately through an approved Flipper SD app method.\n"
+            "This archive is NOT a Momentum .tgz and MUST NOT be flashed as firmware.\n"
+            "The FAP needs the EXACT SDK used for the custom Momentum firmware build.\n"
+            "Only use with the actual ESP-WROOM-32 chip confirmed and safe 3.3V UART wiring.\n"
+            "Firmware erasure/programming needs separate on-device confirmation.\n"
+            "Verify actual board model, ROM chip ID, flash capacity and .bin offsets.\n"
+            "Check USB-to-UART contention and maintain BOOT/EN and qFlipper recovery.\n"
+            "Never connect an Uno R3 5V UART directly to Flipper GPIO.\n"
+            "Keep the current Flipper firmware unchanged until physical validation.\n").encode()
+    provenance=(f"GPL-3.0 source: https://github.com/0xchocolate/flipperzero-esp-flasher\n"
+                f"Pinned upstream commit: {UPSTREAM}\n"
+                f"Published patch source: https://github.com/cruefan94/Flipper-AI-Integration-Testing/blob/{patch_revision}/hardware-installer/patch_esp_flasher_verify.py\n"
+                f"Exact public patch commit: {patch_revision}\n"
+                f"Custom Momentum pin: {momentum_revision}\n"
+                "Any redistribution must comply with GPL-3.0 and provide corresponding source.\n").encode()
     files={FAP_NAME:blob,LICENSE_NAME:license_text,NOTICE:notice,SOURCE_INFO:provenance}
     manifest={
        "format":FORMAT, "target":"Flipper Zero F7, custom pinned Momentum SDK",
@@ -133,7 +133,7 @@ def pack(fap,license_path,output,patch_revision,momentum_revision):
        "files":{name:{"sha256":digest(data),"size":len(data)} for name,data in files.items()},
     }
     payload=dict(files)
-    payload[MANIFEST]=(json.dumps(manifest,indent=2,sort_keys=True)+"\\n").encode()
+    payload[MANIFEST]=(json.dumps(manifest,indent=2,sort_keys=True)+"\n").encode()
     output=Path(output)
     if output.exists() or output.is_symlink():
         raise ValueError("Refusing to overwrite programmer delivery")
