@@ -43,12 +43,12 @@ Long-press the Termux input area and select **Paste**, or use the Android keyboa
 
 ~~~sh
 cd "$HOME/flipper-ai-preview"
-printf '%s\\n' 'Paste your encryption passphrase below (VISIBLE on screen).'
+printf '%s\n' 'Paste your encryption passphrase below (VISIBLE on screen).'
 IFS= read -r -p 'Passphrase (VISIBLE): ' FLIPPER_PASS
 if [ -z "$FLIPPER_PASS" ]; then
-  printf '%s\\n' 'Empty passphrase; stopping.'
+  printf '%s\n' 'Empty passphrase; stopping.'
 else
-  printf '%s\\n' "$FLIPPER_PASS" | openssl enc -d -aes-256-cbc -pbkdf2 -iter 250000 -salt \
+  printf '%s\n' "$FLIPPER_PASS" | openssl enc -d -aes-256-cbc -pbkdf2 -iter 250000 -salt \
     -pass stdin \
     -in "FlipperAI_ESP32_Complete_Flash_Candidate_UNTESTED.zip.enc" \
     -out "FlipperAI_ESP32_Complete_Flash_Candidate_UNTESTED.zip"
@@ -80,16 +80,16 @@ termux-setup-storage
 shopt -s nullglob
 updates=( "$HOME"/flipper-ai-preview/verified-flipper/flipper-z-f7-update-*.tgz )
 if [ "${#updates[@]}" -ne 1 ]; then
-  printf '%s\\n' 'STOP: expected exactly one verified .tgz; see files below:'
+  printf '%s\n' 'STOP: expected exactly one verified .tgz; see files below:'
   find "$HOME/flipper-ai-preview" -maxdepth 3 -type f -name '*.tgz' -print
 else
   src="${updates[0]}"
   dest="$HOME/storage/downloads/$(basename "$src")"
   if [ -e "$dest" ] || [ -L "$dest" ]; then
-    printf 'Already exists in Downloads (not overwritten): %s\\n' "$dest"
+    printf 'Already exists in Downloads (not overwritten): %s\n' "$dest"
   else
     cp -- "$src" "$dest"
-    printf 'COPIED TO ANDROID DOWNLOADS: %s\\n' "$dest"
+    printf 'COPIED TO ANDROID DOWNLOADS: %s\n' "$dest"
   fi
   ls -lh -- "$src" "$dest"
 fi
