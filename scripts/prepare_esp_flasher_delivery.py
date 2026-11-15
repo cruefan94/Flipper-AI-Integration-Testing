@@ -81,6 +81,9 @@ def verify(path):
     patch=manifest.get("patch_revision")
     if not isinstance(patch,str) or len(patch)!=40 or any(c not in "0123456789abcdef" for c in patch):
         raise ValueError("Patch revision must be an exact pinned SHA")
+    firmware_source=manifest.get("firmware_source_revision")
+    if not isinstance(firmware_source,str) or len(firmware_source)!=40 or any(x not in "0123456789abcdef" for x in firmware_source):
+        raise ValueError("Private firmware source revision must be an exact pinned SHA")
     target=manifest.get("target")
     if target!="Flipper Zero F7, custom pinned Momentum SDK":
         raise ValueError("Programmer target mismatch")
@@ -90,7 +93,9 @@ def verify(path):
             raise ValueError("Programmer package content hash/size mismatch: "+name)
     if set(manifest["files"])!={FAP_NAME,LICENSE_NAME,NOTICE,SOURCE_INFO}:
         raise ValueError("Unexpected manifest file inventory")
-    if UPSTREAM.encode() not in content[SOURCE_INFO] or patch.encode() not in content[SOURCE_INFO]:
+    if (UPSTREAM.encode() not in content[SOURCE_INFO]
+            or patch.encode() not in content[SOURCE_INFO]
+            or firmware_source.encode() not in content[SOURCE_INFO]):
         raise ValueError("Source provenance does not match manifest")
     if b"NOT HARDWARE TESTED" not in content[NOTICE]:
         raise ValueError("Missing explicit hardware warning")
@@ -99,7 +104,7 @@ def verify(path):
     return manifest
 
 
-def pack(fap,license_path,output,patch_revision,momentum_revision):
+def pack(fap,license_path,output,patch_revision,momentum_revision,firmware_source_revision):
     blob=_read(fap,MAX_FAP_BYTES)
     _validate_fap(blob)
     license_text=_read(license_path,MAX_LICENSE_BYTES)
@@ -109,6 +114,9 @@ def pack(fap,license_path,output,patch_revision,momentum_revision):
         raise ValueError("Expected immutable patch commit SHA")
     if not isinstance(momentum_revision,str) or len(momentum_revision)!=40 or any(x not in "0123456789abcdef" for x in momentum_revision):
         raise ValueError("Expected immutable custom Momentum commit SHA")
+    if (not isinstance(firmware_source_revision,str) or len(firmware_source_revision)!=40
+            or any(x not in "0123456789abcdef" for x in firmware_source_revision)):
+        raise ValueError("Expected immutable private firmware source commit SHA")
     notice=("ESP32 PROGRAMMER — DEVELOPMENT ONLY — NOT HARDWARE TESTED\n"
             "Install esp_flasher.fap separately through an approved Flipper SD app method.\n"
             "This archive is NOT a Momentum .tgz and MUST NOT be flashed as firmware.\n"
@@ -124,12 +132,15 @@ def pack(fap,license_path,output,patch_revision,momentum_revision):
                 f"Published patch source: https://github.com/cruefan94/Flipper-AI-Integration-Testing/blob/{patch_revision}/hardware-installer/patch_esp_flasher_verify.py\n"
                 f"Exact public patch commit: {patch_revision}\n"
                 f"Custom Momentum pin: {momentum_revision}\n"
+                f"Paired private firmware source commit: {firmware_source_revision}\n"
                 "Any redistribution must comply with GPL-3.0 and provide corresponding source.\n").encode()
     files={FAP_NAME:blob,LICENSE_NAME:license_text,NOTICE:notice,SOURCE_INFO:provenance}
     manifest={
        "format":FORMAT, "target":"Flipper Zero F7, custom pinned Momentum SDK",
        "app":FAP_NAME,"upstream_revision":UPSTREAM,"patch_revision":patch_revision,
-       "momentum_revision":momentum_revision,"hardware_unverified":True,
+       "momentum_revision":momentum_revision,
+       "firmware_source_revision":firmware_source_revision,
+       "hardware_unverified":True,
        "files":{name:{"sha256":digest(data),"size":len(data)} for name,data in files.items()},
     }
     payload=dict(files)
@@ -161,11 +172,13 @@ def main():
     p.add_argument("--out",type=Path,required=True)
     p.add_argument("--patch-revision",required=True)
     p.add_argument("--momentum-revision",required=True)
+    p.add_argument("--firmware-source-revision",required=True)
     v=sub.add_parser("verify")
     v.add_argument("--archive",type=Path,required=True)
     args=parser.parse_args()
     if args.command=="pack":
-        out=pack(args.fap,args.license,args.out,args.patch_revision,args.momentum_revision)
+        out=pack(args.fap,args.license,args.out,args.patch_revision,
+                 args.momentum_revision,args.firmware_source_revision)
         print("Verified GPL ESP Flasher delivery (ENCRYPT before upload):",out)
     else:
         info=verify(args.archive)
