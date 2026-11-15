@@ -56,3 +56,49 @@ jobs:
             exit 1
           fi
           echo "Exact GPL upstream source patched once; unapproved repeat edits refused."
+
+  pinned-momentum-public-sdk:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@v4
+      - name: Clone pinned, public Momentum SDK and GPL ESP Flasher
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --quiet --filter=blob:none https://github.com/Next-Flip/Momentum-Firmware.git "$RUNNER_TEMP/momentum"
+          git -C "$RUNNER_TEMP/momentum" checkout --quiet --detach d3f89dfe2ef6b01839201598e9be1590cba80322
+          git clone --quiet --depth 1 --recurse-submodules https://github.com/0xchocolate/flipperzero-esp-flasher.git "$RUNNER_TEMP/esp-flasher"
+          test "$(git -C "$RUNNER_TEMP/esp-flasher" rev-parse HEAD)" = "1f6f801c3ebecbc4afbf6500564bf99748710e24"
+          grep -qi "GNU GENERAL PUBLIC LICENSE" "$RUNNER_TEMP/esp-flasher/LICENSE"
+      - name: Apply reviewed safety gates to exact GPL upstream source
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 hardware-installer/patch_esp_flasher_verify.py "$RUNNER_TEMP/esp-flasher"
+          test ! -e "$RUNNER_TEMP/momentum/applications_user/esp_flasher"
+          cp -a "$RUNNER_TEMP/esp-flasher" "$RUNNER_TEMP/momentum/applications_user/esp_flasher"
+      - name: Normalize pinned public Momentum CI version metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import os
+          p=Path(os.environ['RUNNER_TEMP'])/'momentum/scripts/version.py'
+          src=p.read_text()
+          old='url, _ = destination.split(" ")'
+          new='url, _ = destination.rsplit(" ", 1)'
+          if src.count(old)!=1:raise SystemExit("Upstream version parser changed")
+          p.write_text(src.replace(old,new,1))
+          PY
+      - name: Compile patched programmer FAP against pinned public Momentum SDK
+        shell: bash
+        working-directory: ${{ runner.temp }}/momentum
+        run: |
+          set -euo pipefail
+          ./fbt TARGET_HW=7 COMPACT=1 fap_esp_flasher -j2
+          FAP="$(find . -type f -name esp_flasher.fap -print -quit)"
+          test -n "$FAP" && test -s "$FAP"
+          test "$(od -An -tx1 -N4 "$FAP" | tr -d ' \n')" = 7f454c46
+          echo "GPL patched ESP Flasher compiled. Public source/SDK only; no FAP uploaded."
