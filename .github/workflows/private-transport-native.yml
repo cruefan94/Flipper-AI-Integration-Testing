@@ -1,0 +1,95 @@
+# Compiles the ACTUAL PRIVATE transport branch on a public CI runner.
+# Private code and compiler output never become public artifacts or logs.
+name: Private Flipper AI transport source — isolated native checks
+
+on:
+  push:
+    branches: [test/private-transport-native-ci-20261115]
+    paths:
+      - '.github/workflows/private-transport-native.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native-private-source:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 12
+    steps:
+      - name: Require read-only private source credential
+        shell: bash
+        env:
+          PRIVATE_TOKEN: ${{ secrets.FLIPPER_PRIVATE_SOURCE_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "$PRIVATE_TOKEN" ]; then
+            echo "::error::Missing FLIPPER_PRIVATE_SOURCE_TOKEN in the public integration-testing repository"
+            exit 1
+          fi
+          echo "Private credential is configured. It will not be persisted or echoed."
+      - name: Fetch only reviewed private transport branch into temporary directory
+        shell: bash
+        env:
+          PRIVATE_TOKEN: ${{ secrets.FLIPPER_PRIVATE_SOURCE_TOKEN }}
+        run: |
+          set -euo pipefail
+          umask 077
+          export GIT_TERMINAL_PROMPT=0
+          export GIT_ASKPASS=/bin/false
+          export HOME="$RUNNER_TEMP"
+          printf 'machine github.com login x-access-token password %s\n' "$PRIVATE_TOKEN" > "$HOME/.netrc"
+          chmod 600 "$HOME/.netrc"
+          trap 'rm -f "$HOME/.netrc"' EXIT
+          git -c credential.helper= -c http.extraheader= clone --quiet --depth 1 \
+            --branch feature/ai-transport-failclosed-20261115 \
+            https://github.com/cruefan94/Flipper-AI-Momentum-.git \
+            "$RUNNER_TEMP/private-transport"
+          test "$(git -C "$RUNNER_TEMP/private-transport" rev-parse HEAD)" = \
+            "da09aeec150f066c4803348ce44238c689c41011" || {
+              echo "::error::Private source revision changed. Review and explicitly pin a new SHA before continuing."
+              exit 1
+            }
+          echo "Pinned private source fetched to ephemeral runner only."
+      - name: Compile and execute private C tests, including undefined-behavior sanitizer
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          cd "$RUNNER_TEMP/private-transport"
+          LOG="$RUNNER_TEMP/private-native-compiler.log"
+          OUT="$RUNNER_TEMP/private-native-tests"
+          mkdir -p "$OUT"
+          # Keep compiler diagnostics PRIVATE to runner: no source snippets, logs or artifacts.
+          run_guarded() {
+            if ! "$@" >"$LOG" 2>&1; then
+              echo "::error::Private transport source native test failed. Diagnostics stayed on ephemeral runner."
+              return 1
+            fi
+          }
+          run_guarded cc -std=c11 -O1 -g -Wall -Wextra -Werror -pedantic \
+            tests/ai_actual_source_native_test.c -o "$OUT/actual"
+          run_guarded "$OUT/actual"
+          run_guarded cc -std=c11 -O1 -g -Wall -Wextra -Werror -pedantic \
+            -fsanitize=undefined -fno-sanitize-recover=all \
+            tests/ai_actual_source_native_test.c -o "$OUT/actual-ubsan"
+          run_guarded "$OUT/actual-ubsan"
+          run_guarded cc -std=c11 -O1 -g -Wall -Wextra -Werror -pedantic \
+            -Iapplications_user/flipper_ai tests/ai_transport_manager_test.c \
+            -o "$OUT/manager"
+          run_guarded "$OUT/manager"
+          run_guarded cc -std=c11 -O1 -g -Wall -Wextra -Werror -pedantic \
+            -fsanitize=undefined -fno-sanitize-recover=all \
+            -Iapplications_user/flipper_ai tests/ai_transport_manager_test.c \
+            -o "$OUT/manager-ubsan"
+          run_guarded "$OUT/manager-ubsan"
+          echo "Pinned private-source native tests + UBSan passed. No firmware compiled or flashed."
+      - name: Destroy temporary private source and test binaries
+        if: always()
+        shell: bash
+        run: |
+          rm -rf "$RUNNER_TEMP/private-transport" \
+            "$RUNNER_TEMP/private-native-tests" \
+            "$RUNNER_TEMP/private-native-compiler.log" \
+            "$RUNNER_TEMP/.netrc"
+          echo "Temporary private files deleted. No artifacts uploaded."
