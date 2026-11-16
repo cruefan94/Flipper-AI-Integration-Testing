@@ -1,10 +1,10 @@
 # Compiles the ACTUAL PRIVATE transport branch on a public CI runner.
 # Private code and compiler output never become public artifacts or logs.
-name: Unified Momentum ESP32 installer preflight and AI1 private-source audit
+name: Full private Flipper AI source and test inventory — isolated audit
 
 on:
   push:
-    branches: [test/installer-preflight-audit-20261115]
+    branches: [test/full-private-source-regression-audit-20261115]
     paths:
       - '.github/workflows/private-transport-native.yml'
   workflow_dispatch:
@@ -46,10 +46,10 @@ jobs:
             https://github.com/cruefan94/Flipper-AI-Momentum-.git \
             "$RUNNER_TEMP/private-transport"
           # Re-fetch pinned SHA even if newer hourly commits move the branch head.
-          git -C "$RUNNER_TEMP/private-transport" fetch --quiet --depth 1 origin "f14af86643fbc0fbba957a16a1d03e880a373bcf"
-          git -C "$RUNNER_TEMP/private-transport" checkout --quiet --detach "f14af86643fbc0fbba957a16a1d03e880a373bcf"
+          git -C "$RUNNER_TEMP/private-transport" fetch --quiet --depth 1 origin "642e267612f1c555c60eb0db2ec167f5d2ab036f"
+          git -C "$RUNNER_TEMP/private-transport" checkout --quiet --detach "642e267612f1c555c60eb0db2ec167f5d2ab036f"
           test "$(git -C "$RUNNER_TEMP/private-transport" rev-parse HEAD)" = \
-            "f14af86643fbc0fbba957a16a1d03e880a373bcf" || {
+            "642e267612f1c555c60eb0db2ec167f5d2ab036f" || {
               echo "::error::Private source revision changed. Review and explicitly pin a new SHA before continuing."
               exit 1
             }
@@ -96,6 +96,25 @@ jobs:
           run_guarded python3 -m unittest discover -s tests -p 'test_ai_gatt_link_events.py' -v
           run_guarded python3 -m unittest discover -s tests -p 'test_ai_gatt_rx_payload.py' -v
           run_guarded python3 -m unittest discover -s tests -p 'test_ai_tx_frame_guard.py' -v
+          # Full source audit (not only the curated release smoke tests).
+          # Private tracebacks remain in a runner-local log; print only the
+          # failing TEST NAMES, not private code or source-context excerpts.
+          suite() {
+            local label="$1"; shift
+            local output="$RUNNER_TEMP/private-source-suite.log"
+            if ! "$@" >"$output" 2>&1; then
+              echo "::error::Full private source audit failed in $label."
+              grep -E '^(FAIL:|ERROR:|FAILED \(|Ran [0-9]+ tests)' "$output" | head -n 35 || true
+              return 1
+            fi
+            echo "Private suite PASS: $label"
+          }
+          suite "Python syntax and imports" python3 -m compileall -q \
+            scripts tests momentum_overlay esp32_component_compat
+          suite "all Python tests" python3 -m unittest discover -s tests -p 'test_*.py' -v
+          suite "firmware overlay tests" python3 -m unittest discover -s momentum_overlay/tests -p 'test_*.py' -v
+          suite "ESP32 component tests" python3 -m unittest discover -s esp32_component_compat/tests -p 'test_*.py' -v
+          suite "private Android source tests" python3 -m unittest discover -s android_satellite/tests -p 'test_*.py' -v
           echo "Pinned unified ESP32 + BLE source, installer and transport tests passed (no flash)."
       - name: Checkout public integration test harness
         uses: actions/checkout@v4
