@@ -28,7 +28,8 @@ def inspect_port(name):
     path = Path(name)
     result = {'port': name, 'category': classify_port(name),
               'exists': path.exists(), 'character_device': False,
-              'read_write_access': False, 'safe_to_flash': False}
+              'read_write_access': False, 'safe_to_flash': False,
+              'resolved_device': None}
     # A missing/broken symlink or a disappearing USB device must never crash
     # diagnostics or be interpreted as authorization to flash.
     try:
@@ -38,6 +39,12 @@ def inspect_port(name):
         return result
     result['exists'] = True
     result['character_device'] = stat.S_ISCHR(info.st_mode)
+    if result['character_device']:
+        try:
+            # Advisory identity only: never opens or operates the device.
+            result['resolved_device'] = str(path.resolve(strict=True))
+        except (OSError, RuntimeError, ValueError) as exc:
+            result['inspection_error'] = type(exc).__name__
     # Symlinks can change between stat and access; this is advisory only.
     try:
         result['read_write_access'] = bool(result['character_device'] and os.access(path, os.R_OK | os.W_OK))
@@ -51,10 +58,19 @@ def report(ports):
         version = importlib.metadata.version('esptool')
     except importlib.metadata.PackageNotFoundError:
         version = None
+    inspected = [inspect_port(p) for p in ports]
+    aliases = {}
+    for entry in inspected:
+        target = entry['resolved_device']
+        if target:
+            aliases.setdefault(target, []).append(entry['port'])
+    duplicates = {target: names for target, names in aliases.items()
+                  if len(names) > 1}
     return {'mode': 'read_only_preflight', 'esptool_version': version,
-            'ports': [inspect_port(p) for p in ports],
+            'ports': inspected, 'duplicate_device_aliases': duplicates,
             'notes': [
                 'Port detection does not prove an ESP32 is attached.',
+                'Multiple serial paths may refer to one device; resolved paths are advisory, not stable hardware identity.',
                 'USB devices may disconnect or change identity after inspection; never treat this report as flashing authorization.',
                 'ESP32-WROOM ROM download mode: hold GPIO0/BOOT LOW while resetting EN, then release BOOT.',
                 'Common ground and 3.3 V UART logic are mandatory; never feed 5 V into ESP32 GPIO.',
