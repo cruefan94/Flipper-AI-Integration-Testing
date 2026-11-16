@@ -27,9 +27,12 @@ def validate(data):
         raise ValueError("missing fields: " + ", ".join(sorted(required-set(data))))
     if data["schema_version"] != 1 or data["deliverable"] not in DELIVERABLES:
         raise ValueError("invalid schema or deliverable")
-    if data["repository"] not in {"cruefan94/Flipper-AI-Momentum-",
-                                  "cruefan94/Flipper-AI-Android-Satellite"}:
-        raise ValueError("unexpected source repository")
+    expected_repository = {
+        "android_test_apk": "cruefan94/Flipper-AI-Android-Satellite",
+        "f7_encrypted_updater": "cruefan94/Flipper-AI-Momentum-",
+    }[data["deliverable"]]
+    if data["repository"] != expected_repository:
+        raise ValueError("deliverable/source repository mismatch")
     if not HEX40.fullmatch(str(data["source_commit"])):
         raise ValueError("source commit must be a full 40-character SHA")
     if not SHA256.fullmatch(str(data["artifact_sha256"])):
