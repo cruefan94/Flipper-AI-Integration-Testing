@@ -1,0 +1,35 @@
+name: Audited Flipper F7 phone extractor — public synthetic test only
+
+on:
+  push:
+    branches:
+      - feature/audited-f7-termux-safe-download-20261115
+    paths:
+      - 'termux/audited_f7_to_downloads.py'
+      - 'tests/test_audited_f7_to_downloads.py'
+      - '.github/workflows/audited-f7-phone-extraction-checks.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  safe-extractor:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify required local prerequisites
+        run: |
+          set -euo pipefail
+          command -v openssl
+          python3 -m py_compile termux/firmware_to_phone.py termux/audited_f7_to_downloads.py
+      - name: Test synthetic F7 archives, fake OpenSSL passphrase, exact revision and Downloads safety
+        run: python3 -m unittest discover -s tests -p 'test_audited_f7_to_downloads.py' -v
+      - name: Complete without exposing private firmware
+        run: echo "Only synthetic test firmware, an obvious public test-only passphrase and audited tool source used. Nothing flashed or uploaded."
