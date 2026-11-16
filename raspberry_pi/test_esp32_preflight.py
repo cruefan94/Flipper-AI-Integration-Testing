@@ -2,6 +2,7 @@
 import importlib.util
 from pathlib import Path
 import unittest
+import tempfile
 
 spec = importlib.util.spec_from_file_location(
     'esp32_preflight', Path(__file__).with_name('esp32_preflight.py'))
@@ -14,6 +15,23 @@ class ReadOnlyPreflightTests(unittest.TestCase):
         self.assertIn('USB-UART', mod.classify_port('/dev/ttyUSB0'))
         self.assertIn('onboard UART', mod.classify_port('/dev/ttyAMA0'))
         self.assertIn('persistent', mod.classify_port('/dev/serial/by-id/usb-device'))
+
+    def test_discovery_includes_by_id_alias_without_opening_device(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / 'ttyUSB0').touch()
+            alias_dir = root / 'serial' / 'by-id'
+            alias_dir.mkdir(parents=True)
+            (alias_dir / 'usb-test-esp32').symlink_to(root / 'ttyUSB0')
+            discovered = mod.discover_ports(root)
+            self.assertEqual(discovered, sorted([str(root / 'ttyUSB0'),
+                                                  str(alias_dir / 'usb-test-esp32')]))
+
+    def test_discovery_without_by_id_directory(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / 'ttyACM0').touch()
+            self.assertEqual(mod.discover_ports(root), [str(root / 'ttyACM0')])
 
     def test_missing_port_never_claims_flash_ready(self):
         info = mod.inspect_port('/dev/does-not-exist-flipper-lab')
