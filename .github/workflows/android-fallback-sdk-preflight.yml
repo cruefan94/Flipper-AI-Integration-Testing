@@ -1,0 +1,28 @@
+name: Android fallback SDK preflight (public-safe, no app build)
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/ci-fallback-verify.yml"
+      - ".github/workflows/android-fallback-sdk-preflight.yml"
+      - "tests/test_android_fallback_sdk_setup.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sdk-preflight:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Verify hosted SDK and required packages without legacy tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          : "${ANDROID_HOME:?Missing preinstalled Android SDK on GitHub-hosted runner}"
+          command -v sdkmanager
+          sdkmanager --version
+          sdkmanager --install "platforms;android-35" "build-tools;35.0.0"
+          test -f "${ANDROID_HOME}/platforms/android-35/android.jar"
+          test -x "${ANDROID_HOME}/build-tools/35.0.0/aapt"
+          echo "SDK provisioning passed; no APK, private source, device or cloud deployment used."
