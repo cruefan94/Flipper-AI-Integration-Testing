@@ -66,7 +66,7 @@ jobs:
           git -c http.extraheader= clone --quiet --depth 1 --branch audit/installer-preflight-and-code-gates-20261115 \
             https://github.com/cruefan94/Flipper-AI-Momentum-.git "$RUNNER_TEMP/private-ai"
           test -f "$RUNNER_TEMP/private-ai/momentum_overlay/install_source_overlay.py"
-          test "$(git -C "$RUNNER_TEMP/private-ai" rev-parse HEAD)" = "0cc9404d2d541af11921367c2a5639c9ed8fdb77" || {
+          test "$(git -C "$RUNNER_TEMP/private-ai" rev-parse HEAD)" = "642e267612f1c555c60eb0db2ec167f5d2ab036f" || {
             echo "::error::Unified private source moved; review new revision before compiling."
             exit 1
           }
