@@ -1,0 +1,23 @@
+name: Public-safe release metadata gate
+on:
+  pull_request:
+    paths:
+      - 'integration/public_safe_release_gate.py'
+      - 'integration/test_public_safe_release_gate.py'
+      - '.github/workflows/public-safe-release-metadata.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  metadata:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Synthetic public-safe schema regression
+        run: python3 -m unittest discover -s integration -p 'test_public_safe_release_gate.py' -v
