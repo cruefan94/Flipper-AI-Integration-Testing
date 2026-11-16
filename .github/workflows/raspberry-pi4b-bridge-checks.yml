@@ -1,0 +1,38 @@
+name: Raspberry Pi 4B AI companion and private command bridge checks
+
+on:
+  push:
+    branches:
+      - feature/raspberry-pi4b-ai-bridge-v01-20261115
+    paths:
+      - 'raspberry_pi/**'
+      - '.github/workflows/raspberry-pi4b-bridge-checks.yml'
+  pull_request:
+    paths:
+      - 'raspberry_pi/**'
+      - '.github/workflows/raspberry-pi4b-bridge-checks.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pi-readonly:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 6
+    strategy:
+      matrix:
+        python-version: ['3.11', '3.12']
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Python syntax and import safety
+        run: python -m py_compile raspberry_pi/pi_bridge.py raspberry_pi/prepare_audited_f7.py raspberry_pi/test_pi_bridge.py raspberry_pi/test_prepare_audited_f7.py
+      - name: Private issue owner/device and local flash safety test
+        run: python -m unittest discover -s raspberry_pi -p 'test_*.py' -v
+      - name: Confirm no secrets and no device operations in CI
+        run: echo "No Flipper hardware or Pi used. No GitHub token, OpenAI key, SSH, qFlipper flash, or real firmware accessed."
