@@ -1,0 +1,28 @@
+name: Raspberry Pi 4B one-command setup safety checks
+on:
+  push:
+    branches: [feature/raspberry-pi4b-one-command-setup-20261115]
+    paths:
+      - 'raspberry_pi/**'
+      - '.github/workflows/raspberry-pi4b-setup-checks.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  setup-safety:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Test shell syntax, source and no-op installer
+        run: |
+          bash -n raspberry_pi/setup_pi4b.sh
+          bash -n raspberry_pi/pi_health.sh
+          python3 -m unittest discover -s raspberry_pi -p 'test_*.py' -v
+      - name: Confirm scope
+        run: echo "Synthetic checks only. No apt installation, Pi hardware, device flashing or private data."
