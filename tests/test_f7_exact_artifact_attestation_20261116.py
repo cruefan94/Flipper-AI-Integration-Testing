@@ -6,8 +6,8 @@ The manifest is an attestation *summary*, not proof of hardware success.
 import re
 import unittest
 
-HEX256 = re.compile(r"[0-9a-f]{64}\\Z")
-HEX32 = re.compile(r"[0-9a-f]{8}\\Z")
+HEX256 = re.compile(r"[0-9a-f]{64}\Z")
+HEX32 = re.compile(r"[0-9a-f]{8}\Z")
 ALLOWED = {
     "source_repository", "source_sha", "workflow_run_id", "encrypted_artifact_id",
     "encrypted_zip_sha256", "native_tgz_sha256", "firmware_dfu_sha256",
