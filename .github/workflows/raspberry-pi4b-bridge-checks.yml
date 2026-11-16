@@ -31,7 +31,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Python syntax and import safety
-        run: python -m py_compile raspberry_pi/pi_bridge.py raspberry_pi/test_pi_bridge.py
+        run: python -m py_compile raspberry_pi/pi_bridge.py raspberry_pi/prepare_audited_f7.py raspberry_pi/test_pi_bridge.py raspberry_pi/test_prepare_audited_f7.py
       - name: Private issue owner/device and local flash safety test
         run: python -m unittest discover -s raspberry_pi -p 'test_*.py' -v
       - name: Confirm no secrets and no device operations in CI
