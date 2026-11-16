@@ -8,7 +8,9 @@ Does NOT flash the Flipper, modify qFlipper, or overwrite the recovery TGZ.
 from __future__ import annotations
 
 import hashlib
+import json
 import os
+import shutil
 from pathlib import Path
 import subprocess
 import sys
@@ -109,8 +111,6 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    import json
-    import shutil
     try:
         sys.exit(main())
     except Exception as e:
