@@ -11,7 +11,9 @@ class AndroidFallbackSdkTests(unittest.TestCase):
         text = WORKFLOW.read_text(encoding="utf-8")
         self.assertNotIn("android-actions/setup-android@v3", text)
         self.assertIn('Missing preinstalled Android SDK on hosted runner', text)
-        self.assertIn("sdkmanager --version", text)
+        self.assertIn("find \"$ANDROID_HOME/cmdline-tools\"", text)
+        self.assertIn('echo "$(dirname "$SDKMANAGER_BIN")" >> "$GITHUB_PATH"', text)
+        self.assertIn('"$SDKMANAGER_BIN" --version', text)
 
     def test_android_build_keeps_required_sdk_packages_and_gates(self):
         text = WORKFLOW.read_text(encoding="utf-8")
