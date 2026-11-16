@@ -19,10 +19,16 @@ def format_snapshot(data: dict) -> dict[str, str]:
     temp = data.get("cpu_temp_c")
     uptime = data.get("uptime_seconds")
     pressure = data.get("memory_pressure_some_avg10")
+    def memory_value(available: str, total: str) -> str:
+        left, right = memory.get(available), memory.get(total)
+        if left is None or right is None or right == 0:
+            return "Unavailable"
+        return f"{left} / {right} MiB"
+
     return {
         "CPU temperature": "Unavailable" if temp is None else f"{temp:.1f} °C",
-        "Available RAM": f"{memory.get('available_mib', 0)} / {memory.get('total_mib', 0)} MiB",
-        "Free swap": f"{memory.get('swap_free_mib', 0)} / {memory.get('swap_total_mib', 0)} MiB",
+        "Available RAM": memory_value("available_mib", "total_mib"),
+        "Free swap": memory_value("swap_free_mib", "swap_total_mib"),
         "Memory pressure (10 s)": "Unavailable" if pressure is None else f"{pressure:.2f}%",
         "Uptime": "Unavailable" if uptime is None else f"{uptime // 3600}h {(uptime % 3600) // 60}m",
     }
