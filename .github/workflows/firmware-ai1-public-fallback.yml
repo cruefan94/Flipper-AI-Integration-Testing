@@ -1,0 +1,31 @@
+# Public-safe fallback after two completed private firmware CI failures.
+# Only the public AI1 protocol fixtures are exercised. This does NOT verify
+# the private auth-generation source change or compile a Momentum F7 image.
+name: Firmware AI1 public-safe fallback contract checks
+on:
+  push:
+    branches: [test/firmware-ai1-auth-fallback-20261116]
+    paths:
+      - '.github/workflows/firmware-ai1-public-fallback.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  public-ai1:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Public AI1 frame and policy contracts
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -p 'test_ai1_contract.py' -v
+          python3 -m unittest discover -s tests -p 'test_public_ci.py' -v
+      - name: Record scope and blocked private proof
+        run: |
+          echo 'Public AI1 contract fixtures only; private source not checked out.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Private source regression and actual F7 compile remain UNVERIFIED.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Trigger: two completed private failures 43833835543, 43833851849.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'No private source, firmware, keys or logs are included.' >> "$GITHUB_STEP_SUMMARY"
