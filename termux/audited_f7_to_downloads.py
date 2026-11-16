@@ -74,7 +74,9 @@ def identify_input(file_or_directory: Path | None, downloads: Path) -> Path:
 
 
 def extract_encrypted_from_outer_zip(outer: Path, destination: Path,
-                                     expected_digest: str = ARTIFACT_DIGEST) -> Path:
+                                     expected_digest: str | None = None) -> Path:
+    if expected_digest is None:
+        expected_digest = ARTIFACT_DIGEST
     if not outer.is_file() or outer.is_symlink():
         raise DeliveryError("Expected a regular GitHub artifact ZIP")
     if outer.stat().st_size > MAX_ARCHIVE_BYTES:
