@@ -69,7 +69,11 @@ class PiHealthWindow:
                 self.labels[name].configure(text=value)
             self.status.configure(text="Read-only Pi OS health; refreshed successfully.")
         except (OSError, ValueError, TypeError) as exc:
-            self.status.configure(text=f"Read failed: {type(exc).__name__}")
+            # Never leave previously successful numbers displayed as live data
+            # after a failed refresh. A stale temperature can be dangerous.
+            for label in self.labels.values():
+                label.configure(text="Unavailable")
+            self.status.configure(text=f"Read failed: {type(exc).__name__}; values cleared.")
         self.timer_id = self.root.after(self.interval_ms, self.refresh)
 
     def close(self) -> None:
