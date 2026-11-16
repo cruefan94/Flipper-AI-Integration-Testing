@@ -71,6 +71,7 @@ def report(ports):
             'notes': [
                 'Port detection does not prove an ESP32 is attached.',
                 'Multiple serial paths may refer to one device; resolved paths are advisory, not stable hardware identity.',
+                'Automatic discovery includes /dev/serial/by-id aliases when present; symlink names do not prove board identity.',
                 'USB devices may disconnect or change identity after inspection; never treat this report as flashing authorization.',
                 'ESP32-WROOM ROM download mode: hold GPIO0/BOOT LOW while resetting EN, then release BOOT.',
                 'Common ground and 3.3 V UART logic are mandatory; never feed 5 V into ESP32 GPIO.',
@@ -80,12 +81,25 @@ def report(ports):
             ]}
 
 
+def discover_ports(dev_root=Path('/dev')):
+    """List likely USB serial nodes and stable by-id aliases, without opening ports."""
+    found = []
+    for pattern in ('ttyUSB*', 'ttyACM*'):
+        found.extend(str(p) for p in dev_root.glob(pattern))
+    by_id = dev_root / 'serial' / 'by-id'
+    try:
+        found.extend(str(p) for p in by_id.iterdir() if p.is_symlink())
+    except (FileNotFoundError, NotADirectoryError, PermissionError, OSError):
+        # Missing/locked-down udev directory must not break the report.
+        pass
+    return sorted(set(found))
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--port', action='append', default=[], help='Serial device to inspect without opening it')
     args = parser.parse_args()
-    ports = args.port or sorted([str(p) for pattern in ('ttyUSB*', 'ttyACM*')
-                                 for p in Path('/dev').glob(pattern)])
+    ports = args.port or discover_ports()
     print(json.dumps(report(ports), indent=2))
 
 
