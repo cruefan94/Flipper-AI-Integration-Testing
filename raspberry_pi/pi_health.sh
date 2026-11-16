@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Raspberry Pi 4B: read-only health audit. Never overclock/flash/reboot/erase.
+# Raspberry Pi 4B: read-only health audit. No system administration actions.
 set -Eeuo pipefail
 echo "=== FLIPPER AI: RASPBERRY PI 4B HEALTH ==="
 printf 'OS: '
