@@ -5,6 +5,7 @@ modify permissions, or infer that a detected board is definitely a Flipper.
 """
 from __future__ import annotations
 
+import unicodedata
 import tkinter as tk
 from tkinter import ttk
 
@@ -18,7 +19,10 @@ def safe_label(value: object, fallback: str, limit: int = 96) -> str:
     """Keep untrusted USB descriptors on one printable, bounded display line."""
     if value is None or value == "":
         return fallback
-    cleaned = "".join(ch if ch.isprintable() else " " for ch in str(value))
+    cleaned = "".join(
+        ch if ch.isprintable() and not unicodedata.category(ch).startswith("C")
+        else " " for ch in str(value)
+    )
     cleaned = " ".join(cleaned.split())
     return cleaned[:limit] or fallback
 
