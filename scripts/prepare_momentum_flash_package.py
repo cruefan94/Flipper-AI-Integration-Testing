@@ -12,6 +12,7 @@ import io
 import json
 from pathlib import Path, PurePosixPath
 import tarfile
+import zlib
 
 MAX_TGZ_BYTES = 128 * 1024 * 1024
 MAX_MEMBERS = 512
@@ -23,6 +24,23 @@ FORMAT = "flipper-ai-native-tgz-delivery-v1"
 
 def digest(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
+
+
+def validate_dfu_crc(data: bytes) -> None:
+    """Match Flipper updater's DFU-stage 9 CRC32 and standard 16-byte suffix.
+
+    Flipper validates the CRC of the entire DFU file, including its stored
+    little-endian inverted checksum. A valid whole-file result is 0xFFFFFFFF.
+    SHA256 over a delivery archive cannot replace this check.
+    """
+    if len(data) < 16 or data[-8:-5] != b"UFD" or data[-5] != 16:
+        raise ValueError("Invalid DFU firmware suffix; refusing to deliver firmware")
+    crc = zlib.crc32(data) & 0xFFFFFFFF
+    if crc != 0xFFFFFFFF:
+        raise ValueError(
+            "DFU file CRC mismatch (Flipper updater stage 9-99); "
+            "do not deliver this firmware for flashing"
+        )
 
 
 def checked_members(archive: tarfile.TarFile):
@@ -68,6 +86,8 @@ def verify_native_tgz(blob: bytes, updater_name: str, file_records: dict):
             if entry is None:
                 raise ValueError("Cannot read native updater member")
             data = entry.read()
+            if relative == "firmware.dfu":
+                validate_dfu_crc(data)
             record = file_records[relative]
             if len(data) != record["size"] or digest(data) != record["sha256"]:
                 raise ValueError(f"Native updater hash mismatch: {relative}")
