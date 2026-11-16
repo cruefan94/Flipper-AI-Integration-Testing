@@ -29,6 +29,14 @@ class GateTests(unittest.TestCase):
     def test_reject_bad_sha_and_non_boolean(self):
         for item in ({**BASE,"artifact_sha256":"bad"},{**BASE,"hardware_verified":"false"}):
             with self.assertRaises(ValueError):validate(item)
+    def test_reject_cross_deliverable_source_mismatch(self):
+        for item in (
+            {**BASE, "repository": "cruefan94/Flipper-AI-Android-Satellite"},
+            {**BASE, "deliverable": "android_test_apk"},
+        ):
+            with self.subTest(deliverable=item["deliverable"], repository=item["repository"]):
+                with self.assertRaisesRegex(ValueError, "mismatch"):
+                    validate(item)
     def test_android_test_only(self):
         item={**BASE,"deliverable":"android_test_apk",
               "repository":"cruefan94/Flipper-AI-Android-Satellite","status":"test_only"}
