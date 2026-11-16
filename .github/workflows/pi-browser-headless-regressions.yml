@@ -1,0 +1,28 @@
+name: Pi browser panel headless regressions
+
+on:
+  pull_request:
+    paths:
+      - 'raspberry_pi/pi_browser_dashboard.py'
+      - 'raspberry_pi/pi_browser_memory_advisor.py'
+      - 'tests/test_pi_browser_lifecycle.py'
+      - 'tests/test_pi_browser_copilot_review.py'
+      - '.github/workflows/pi-browser-headless-regressions.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  browser-panel-headless:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile Pi browser modules and tests
+        run: python -m py_compile raspberry_pi/pi_browser_dashboard.py raspberry_pi/pi_browser_memory_advisor.py tests/test_pi_browser_lifecycle.py tests/test_pi_browser_copilot_review.py
+      - name: Execute exact headless browser regressions
+        run: python -m unittest discover -s tests -p 'test_pi_browser*.py' -v
