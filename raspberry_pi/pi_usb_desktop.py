@@ -27,13 +27,23 @@ def safe_label(value: object, fallback: str, limit: int = 96) -> str:
     return cleaned[:limit] or fallback
 
 
+def safe_usb_id(value: object) -> str:
+    """Display only canonical four-digit hexadecimal USB VID/PID values."""
+    if not isinstance(value, str):
+        return "????"
+    value = value.strip()
+    if len(value) != 4 or any(ch not in "0123456789abcdefABCDEF" for ch in value):
+        return "????"
+    return value.lower()
+
+
 def format_devices(devices: list[dict]) -> list[str]:
     """Conservatively display ports and non-unique USB descriptors."""
     rows = []
     for device in devices:
         port = safe_label(device.get("port"), "Unknown port", 48)
-        vid = safe_label(device.get("vid"), "????", 12)
-        pid = safe_label(device.get("pid"), "????", 12)
+        vid = safe_usb_id(device.get("vid"))
+        pid = safe_usb_id(device.get("pid"))
         product = safe_label(device.get("product"), "Unidentified USB serial device")
         rows.append(f"{port}  [{vid}:{pid}]  {product}")
     return rows or ["No ttyACM/ttyUSB serial ports detected."]
