@@ -1,10 +1,10 @@
 # Compiles the ACTUAL PRIVATE transport branch on a public CI runner.
 # Private code and compiler output never become public artifacts or logs.
-name: Unified ESP32 BLE Transport private-source integration checks
+name: Unified Momentum ESP32 installer preflight and AI1 private-source audit
 
 on:
   push:
-    branches: [test/unified-esp32-transport-native-20261115]
+    branches: [test/installer-preflight-audit-20261115]
     paths:
       - '.github/workflows/private-transport-native.yml'
   workflow_dispatch:
@@ -42,14 +42,14 @@ jobs:
           chmod 600 "$HOME/.netrc"
           trap 'rm -f "$HOME/.netrc"' EXIT
           git -c credential.helper= -c http.extraheader= clone --quiet --depth 1 \
-            --branch integration/esp32-ble-transport-v01-20261115 \
+            --branch audit/installer-preflight-and-code-gates-20261115 \
             https://github.com/cruefan94/Flipper-AI-Momentum-.git \
             "$RUNNER_TEMP/private-transport"
           # Re-fetch pinned SHA even if newer hourly commits move the branch head.
-          git -C "$RUNNER_TEMP/private-transport" fetch --quiet --depth 1 origin "5501cb9b9205a87bec79e7810103a4757a8bb665"
-          git -C "$RUNNER_TEMP/private-transport" checkout --quiet --detach "5501cb9b9205a87bec79e7810103a4757a8bb665"
+          git -C "$RUNNER_TEMP/private-transport" fetch --quiet --depth 1 origin "fb4cb33689562633f76ff9eb7258d138a641b962"
+          git -C "$RUNNER_TEMP/private-transport" checkout --quiet --detach "fb4cb33689562633f76ff9eb7258d138a641b962"
           test "$(git -C "$RUNNER_TEMP/private-transport" rev-parse HEAD)" = \
-            "5501cb9b9205a87bec79e7810103a4757a8bb665" || {
+            "fb4cb33689562633f76ff9eb7258d138a641b962" || {
               echo "::error::Private source revision changed. Review and explicitly pin a new SHA before continuing."
               exit 1
             }
@@ -88,6 +88,7 @@ jobs:
           run_guarded "$OUT/manager-ubsan"
           run_guarded python3 -m unittest discover -s tests -p 'test_unified_transport_esp32.py' -v
           run_guarded python3 -m unittest discover -s tests -p 'test_esp32_main_integration.py' -v
+          run_guarded python3 -m unittest discover -s tests -p 'test_installer_preflight_audit.py' -v
           echo "Pinned unified ESP32 + BLE source, installer and transport tests passed (no flash)."
       - name: Checkout public integration test harness
         uses: actions/checkout@v4
