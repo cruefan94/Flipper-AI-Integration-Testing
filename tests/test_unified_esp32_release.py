@@ -3,6 +3,8 @@
 from __future__ import annotations
 import hashlib
 import io
+import struct
+import zlib
 from pathlib import Path
 import sys
 import tarfile
@@ -57,7 +59,16 @@ class UnifiedReleaseCandidateTest(unittest.TestCase):
         (self.folder/"update.fuf").write_text(
             "Filetype: Flipper firmware upgrade configuration\n"
             "Version: 2\nTarget: 7\nLoader: updater.bin\nFirmware: firmware.dfu\n")
-        for name in ("firmware.dfu","updater.bin","resources.tgz"):
+        # Keep the synthetic updater explicitly non-flashable, while giving
+        # its DFU fixture a valid standard suffix/CRC. Production validation
+        # must reject corrupt DFUs, not invalidate unrelated bundle tests.
+        test_payload = b"NOT FLASHABLE: UNIFIED RELEASE TEST ONLY" * 3
+        suffix = struct.pack("<HHHH", 0xFFFF, 0xFFFF, 0x0483, 0x011A) + b"UFD" + bytes([16])
+        prefix = test_payload + suffix
+        dfu = prefix + struct.pack("<I", zlib.crc32(prefix) ^ 0xFFFFFFFF)
+        self.assertEqual(zlib.crc32(dfu), 0xFFFFFFFF)
+        (self.folder/"firmware.dfu").write_bytes(dfu)
+        for name in ("updater.bin", "resources.tgz"):
             (self.folder/name).write_bytes((name+" TEST ONLY").encode())
         native=self.folder.parent/"flipper-z-f7-update-test.tgz"
         with tarfile.open(native,"w:gz") as tar:
