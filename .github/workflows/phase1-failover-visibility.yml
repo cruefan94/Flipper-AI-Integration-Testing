@@ -1,0 +1,34 @@
+name: Phase 1 failover coverage regression (no API)
+on:
+  push:
+    branches:
+      - audit/phase1-failover-visibility-20261116
+    paths:
+      - 'scripts/ci_failover.py'
+      - 'tests/test_ci_failover.py'
+      - '.github/workflows/phase1-failover-visibility.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  coverage-tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    strategy:
+      matrix:
+        python-version: ['3.11', '3.12']
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Test sanitized failover coverage and original two-failure policy
+        run: |
+          python -m py_compile scripts/ci_failover.py tests/test_ci_failover.py
+          python -m unittest discover -s tests -p 'test_ci_failover.py' -v
+      - name: State execution boundary
+        run: echo "Offline synthetic tests only; no private Actions credential, firmware or phone/Flipper hardware."
