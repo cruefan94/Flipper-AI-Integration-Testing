@@ -137,8 +137,8 @@ class RaspberryPiBridgeTest(unittest.TestCase):
             self.assertFalse((Path(d) / "123.launched").exists())
 
     def test_optional_openai_never_sent_without_explicit_key(self):
-        with patch.dict(pi.os.environ, {}, clear=True):
-            with self.assertRaisesRegex(pi.BridgeError, "separately billed key"):
+        with patch.dict(pi.os.environ, {"FLIPPER_PI_AI_PROVIDER": "openai"}, clear=True):
+            with self.assertRaisesRegex(pi.BridgeError, "no key configured"):
                 pi.ask("What's my Flipper status?")
         with self.assertRaisesRegex(pi.BridgeError, "2,500"):
             pi.ask("x" * 2501)
