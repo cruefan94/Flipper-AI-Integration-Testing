@@ -46,10 +46,10 @@ jobs:
             https://github.com/cruefan94/Flipper-AI-Momentum-.git \
             "$RUNNER_TEMP/private-transport"
           # Re-fetch pinned SHA even if newer hourly commits move the branch head.
-          git -C "$RUNNER_TEMP/private-transport" fetch --quiet --depth 1 origin "dfe66817daef2f238933842440353d8934da1751"
-          git -C "$RUNNER_TEMP/private-transport" checkout --quiet --detach "dfe66817daef2f238933842440353d8934da1751"
+          git -C "$RUNNER_TEMP/private-transport" fetch --quiet --depth 1 origin "0cc9404d2d541af11921367c2a5639c9ed8fdb77"
+          git -C "$RUNNER_TEMP/private-transport" checkout --quiet --detach "0cc9404d2d541af11921367c2a5639c9ed8fdb77"
           test "$(git -C "$RUNNER_TEMP/private-transport" rev-parse HEAD)" = \
-            "dfe66817daef2f238933842440353d8934da1751" || {
+            "0cc9404d2d541af11921367c2a5639c9ed8fdb77" || {
               echo "::error::Private source revision changed. Review and explicitly pin a new SHA before continuing."
               exit 1
             }
