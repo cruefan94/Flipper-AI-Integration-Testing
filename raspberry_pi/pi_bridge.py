@@ -382,33 +382,85 @@ def approve(number: int) -> None:
 
 
 def ask(prompt: str, *, with_diagnostics: bool = False) -> str:
-    """Interactive, opt-in ONLINE AI. This API is billed separately from ChatGPT."""
+    """Offline Ollama by default; optional explicitly selected online API."""
+    import urllib.request
+    import urllib.error
+
     if not isinstance(prompt, str) or not 1 <= len(prompt.strip()) <= 2500:
         raise BridgeError("Enter a non-empty question up to 2,500 characters")
-    if not os.environ.get("OPENAI_API_KEY"):
-        raise BridgeError(
-            "Pi AI API is not configured. Use the read-only diagnostics and private "
-            "GitHub bridge for free; optional OpenAI API needs a separately billed key.")
-    try:
-        from openai import OpenAI
-    except ImportError as exc:
-        raise BridgeError("Optional API client missing: python3 -m pip install openai") from exc
-    model = os.getenv("FLIPPER_PI_OPENAI_MODEL", "gpt-5.5")
+
+    instructions = (
+        "You are a Raspberry Pi 4B Flipper Zero development helper. "
+        "Give concise, accurate, safe answers. "
+        "The Raspberry Pi 4B is a single-board computer. "
+        "Never claim you executed commands or flashed firmware. "
+        "Never confuse ESP32 firmware with Flipper F7 firmware."
+    )
+
     context = ""
     if with_diagnostics:
-        # Only the explicit flag authorizes sending limited Pi diagnostics to the API.
-        context = "\nUser explicitly supplied this sanitized Pi status:\n" + json.dumps(diagnostics())
-    client = OpenAI(timeout=30.0, max_retries=1)
-    response = client.responses.create(
-        model=model,
-        store=False,
-        instructions=("You are a Raspberry Pi 4B Flipper Zero development helper. "
-                      "Explain safe steps. Never claim you performed local commands, "
-                      "flashed firmware, or examined data beyond the supplied input. "
-                      "Never suggest using ESP32 .bin images as a Flipper F7 updater."),
-        input=prompt + context,
-    )
-    return response.output_text or "(No text returned)"
+        context = (
+            "\\nUser explicitly supplied these Pi diagnostics:\\n"
+            + json.dumps(diagnostics())
+        )
+
+    provider = os.getenv("FLIPPER_PI_AI_PROVIDER", "ollama").lower()
+
+    if provider == "ollama":
+        model = os.getenv("FLIPPER_PI_OLLAMA_MODEL", "qwen2.5:0.5b")
+        url = "http://127.0.0.1:11434/api/generate"
+
+        payload = json.dumps({
+            "model": model,
+            "system": instructions,
+            "prompt": prompt + context,
+            "stream": False,
+            "options": {
+                "num_predict": 160,
+                "temperature": 0.3
+            }
+        }).encode("utf-8")
+
+        request = urllib.request.Request(
+            url,
+            data=payload,
+            headers={"Content-Type": "application/json"},
+            method="POST"
+        )
+
+        try:
+            with urllib.request.urlopen(request, timeout=180) as response:
+                result = json.load(response)
+        except (urllib.error.URLError, TimeoutError, OSError) as exc:
+            raise BridgeError(
+                "Local Ollama unavailable. Check: "
+                "systemctl status ollama"
+            ) from exc
+        except (ValueError, UnicodeError) as exc:
+            raise BridgeError("Invalid Ollama response") from exc
+
+        answer = result.get("response", "")
+        return answer.strip() or "(No text returned)"
+
+    if provider == "openai":
+        if not os.environ.get("OPENAI_API_KEY"):
+            raise BridgeError("Online API explicitly selected but no key configured")
+
+        try:
+            from openai import OpenAI
+        except ImportError as exc:
+            raise BridgeError("Optional OpenAI client not installed") from exc
+
+        client = OpenAI(timeout=30.0, max_retries=1)
+        response = client.responses.create(
+            model=os.getenv("FLIPPER_PI_OPENAI_MODEL", "gpt-5.5"),
+            store=False,
+            instructions=instructions,
+            input=prompt + context,
+        )
+        return response.output_text or "(No text returned)"
+
+    raise BridgeError("Unknown AI provider. Choose ollama or openai")
 
 
 def main() -> int:
