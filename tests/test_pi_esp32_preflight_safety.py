@@ -20,6 +20,15 @@ class SerialSafetyTests(unittest.TestCase):
         self.assertFalse(result["safe_to_flash"])
         self.assertEqual(result["inspection_error"], "FileNotFoundError")
 
+    def test_path_exists_is_not_called_before_guarded_stat(self):
+        # Permission-denied paths must not raise before the guarded stat.
+        with patch.object(preflight.Path, "exists", side_effect=PermissionError):
+            with patch.object(preflight.Path, "stat", side_effect=PermissionError):
+                result = preflight.inspect_port("/dev/ttyUSB0")
+        self.assertFalse(result["exists"])
+        self.assertFalse(result["safe_to_flash"])
+        self.assertEqual(result["inspection_error"], "PermissionError")
+
     def test_permission_error_fails_closed(self):
         with patch.object(preflight.Path, "stat", side_effect=PermissionError):
             result = preflight.inspect_port("/dev/ttyACM0")
