@@ -2,6 +2,7 @@
 import importlib.util
 from pathlib import Path
 import stat
+import tempfile
 import unittest
 from unittest.mock import patch
 
@@ -38,6 +39,25 @@ class SerialSafetyTests(unittest.TestCase):
                 result = preflight.inspect_port("/dev/ttyUSB0")
         self.assertTrue(result["character_device"])
         self.assertTrue(result["read_write_access"])
+        self.assertFalse(result["safe_to_flash"])
+
+    def test_duplicate_aliases_are_reported_without_flash_permission(self):
+        # /dev/null is a harmless character device; no serial port is opened.
+        import tempfile
+        with tempfile.TemporaryDirectory() as directory:
+            alias = Path(directory) / "serial-alias"
+            alias.symlink_to("/dev/null")
+            result = preflight.report(["/dev/null", str(alias)])
+        self.assertEqual(result["duplicate_device_aliases"],
+                         {"/dev/null": ["/dev/null", str(alias)]})
+        self.assertTrue(all(not port["safe_to_flash"] for port in result["ports"]))
+
+    def test_regular_file_never_gets_resolved_device_identity(self):
+        with tempfile.TemporaryDirectory() as directory:
+            regular = Path(directory) / "not-a-port"
+            regular.write_text("fixture", encoding="utf-8")
+            result = preflight.inspect_port(str(regular))
+        self.assertIsNone(result["resolved_device"])
         self.assertFalse(result["safe_to_flash"])
 
 
