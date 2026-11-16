@@ -27,7 +27,7 @@ def classify_port(name):
 def inspect_port(name):
     path = Path(name)
     result = {'port': name, 'category': classify_port(name),
-              'exists': path.exists(), 'character_device': False,
+              'exists': False, 'character_device': False,
               'read_write_access': False, 'safe_to_flash': False,
               'resolved_device': None}
     # A missing/broken symlink or a disappearing USB device must never crash
