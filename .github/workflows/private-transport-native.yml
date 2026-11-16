@@ -46,10 +46,10 @@ jobs:
             https://github.com/cruefan94/Flipper-AI-Momentum-.git \
             "$RUNNER_TEMP/private-transport"
           # Re-fetch pinned SHA even if newer hourly commits move the branch head.
-          git -C "$RUNNER_TEMP/private-transport" fetch --quiet --depth 1 origin "fb4cb33689562633f76ff9eb7258d138a641b962"
-          git -C "$RUNNER_TEMP/private-transport" checkout --quiet --detach "fb4cb33689562633f76ff9eb7258d138a641b962"
+          git -C "$RUNNER_TEMP/private-transport" fetch --quiet --depth 1 origin "f14af86643fbc0fbba957a16a1d03e880a373bcf"
+          git -C "$RUNNER_TEMP/private-transport" checkout --quiet --detach "f14af86643fbc0fbba957a16a1d03e880a373bcf"
           test "$(git -C "$RUNNER_TEMP/private-transport" rev-parse HEAD)" = \
-            "fb4cb33689562633f76ff9eb7258d138a641b962" || {
+            "f14af86643fbc0fbba957a16a1d03e880a373bcf" || {
               echo "::error::Private source revision changed. Review and explicitly pin a new SHA before continuing."
               exit 1
             }
@@ -89,6 +89,13 @@ jobs:
           run_guarded python3 -m unittest discover -s tests -p 'test_unified_transport_esp32.py' -v
           run_guarded python3 -m unittest discover -s tests -p 'test_esp32_main_integration.py' -v
           run_guarded python3 -m unittest discover -s tests -p 'test_installer_preflight_audit.py' -v
+          run_guarded cc -std=c11 -O1 -g -Wall -Wextra -Werror -pedantic \
+            -fsanitize=undefined -fno-sanitize-recover=all \
+            momentum_overlay/tests/ai_satellite_session_queue_test.c -o "$OUT/gatt-session"
+          run_guarded "$OUT/gatt-session"
+          run_guarded python3 -m unittest discover -s tests -p 'test_ai_gatt_link_events.py' -v
+          run_guarded python3 -m unittest discover -s tests -p 'test_ai_gatt_rx_payload.py' -v
+          run_guarded python3 -m unittest discover -s tests -p 'test_ai_tx_frame_guard.py' -v
           echo "Pinned unified ESP32 + BLE source, installer and transport tests passed (no flash)."
       - name: Checkout public integration test harness
         uses: actions/checkout@v4
