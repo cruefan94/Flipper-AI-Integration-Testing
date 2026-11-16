@@ -10,6 +10,7 @@ from tkinter import ttk
 
 from .pi_health_desktop import format_snapshot, snapshot
 from .pi_usb_desktop import UsbInventoryPanel
+from .pi_browser_dashboard import BrowserAdvicePanel
 
 
 class HealthPanel(ttk.Frame):
@@ -64,12 +65,15 @@ def main():
     tabs.pack(fill="both", expand=True)
     health = HealthPanel(tabs)
     usb = UsbInventoryPanel(tabs)
+    browser = BrowserAdvicePanel(tabs)
     tabs.add(health, text="Pi health")
     tabs.add(usb, text="USB diagnostics")
+    tabs.add(browser, text="Browser memory")
 
     def close():
         health.stop()
         usb.stop()
+        browser.stop()
         root.destroy()
 
     root.protocol("WM_DELETE_WINDOW", close)
