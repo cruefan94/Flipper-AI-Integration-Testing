@@ -72,6 +72,11 @@ for pkg in gh blueman bluez-obexd; do
   fi
 done
 
+# The Pi bridge uses type union syntax introduced in Python 3.10.
+if ! python3 -c 'import sys; sys.exit(0 if sys.version_info >= (3, 10) else 1)'; then
+  fail "Python 3.10 or newer is required for this Pi bridge. Your existing OS was not upgraded."
+fi
+
 heading "Preparing checked-out project (without overwriting changes)"
 if [ -e "$DEST" ] && [ ! -d "$DEST/.git" ]; then
   fail "$DEST already exists but is not this Git checkout; not overwriting it."
@@ -106,7 +111,7 @@ cat > "$LAUNCHER" <<'LAUNCHER_SCRIPT'
 # Flipper AI Pi helper launcher v1
 set -Eeuo pipefail
 DIR="$HOME/flipper-ai-pi-companion"
-case "$1" in
+case "${1:-help}" in
   health)
     exec bash "$DIR/raspberry_pi/pi_health.sh" ;;
   status)
