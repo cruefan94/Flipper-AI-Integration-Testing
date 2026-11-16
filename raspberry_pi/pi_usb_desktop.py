@@ -14,14 +14,23 @@ except ImportError:
     from pi_usb_inventory import inventory
 
 
+def safe_label(value: object, fallback: str, limit: int = 96) -> str:
+    """Keep untrusted USB descriptors on one printable, bounded display line."""
+    if value is None or value == "":
+        return fallback
+    cleaned = "".join(ch if ch.isprintable() else " " for ch in str(value))
+    cleaned = " ".join(cleaned.split())
+    return cleaned[:limit] or fallback
+
+
 def format_devices(devices: list[dict]) -> list[str]:
     """Conservatively display ports and non-unique USB descriptors."""
     rows = []
     for device in devices:
-        port = str(device.get("port") or "Unknown port")
-        vid = str(device.get("vid") or "????")
-        pid = str(device.get("pid") or "????")
-        product = str(device.get("product") or "Unidentified USB serial device")
+        port = safe_label(device.get("port"), "Unknown port", 48)
+        vid = safe_label(device.get("vid"), "????", 12)
+        pid = safe_label(device.get("pid"), "????", 12)
+        product = safe_label(device.get("product"), "Unidentified USB serial device")
         rows.append(f"{port}  [{vid}:{pid}]  {product}")
     return rows or ["No ttyACM/ttyUSB serial ports detected."]
 
