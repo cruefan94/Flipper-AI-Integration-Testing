@@ -90,23 +90,50 @@ class MomentumPhoneDeliveryTest(unittest.TestCase):
             self.package()
 
     def test_reject_dfu_bad_crc_in_delivery_verify(self):
-        output = self.package()
-        with tarfile.open(output, "r:gz") as original:
-            members = {x.name: original.extractfile(x).read()
-                       for x in original.getmembers()}
-        # A corrupted DFU can be wrapped with internally consistent SHA hashes:
-        # package verify must still reject based on native firmware CRC.
-        # The native inner updater bytes are independently synthesized here.
-        native_file = self.dist / "flipper-z-f7-update-test.tgz"
-        (self.updater / "firmware.dfu").write_bytes(
-            self.synthetic_dfu()[:-4] + b"FAIL")
+        """Even coherent outer and inner SHA-256 values cannot mask bad DFU CRC."""
+        delivery = self.package()
+        with tarfile.open(delivery, "r:gz") as outer:
+            entries = {
+                member.name: outer.extractfile(member).read()
+                for member in outer.getmembers()
+            }
+        manifest = json.loads(entries["SHA256-manifest.json"])
+
+        # Corrupt the DFU body but keep its UFD suffix and all packaging
+        # checksums self-consistent. This mimics a build containing invalid
+        # DFU bytes rather than simple damage to a downloaded archive.
+        bad_dfu = bytearray(self.synthetic_dfu())
+        bad_dfu[5] ^= 0x01
+        self.assertNotEqual(zlib.crc32(bad_dfu), 0xFFFFFFFF)
+        (self.updater / "firmware.dfu").write_bytes(bad_dfu)
         self.make_native()
-        with tarfile.open(native_file, "r:gz") as f:
-            dfu = f.extractfile("f7-update-test/firmware.dfu").read()
-        self.assertNotEqual(zlib.crc32(dfu), 0xFFFFFFFF)
-        firmware.validate_dfu_crc(self.synthetic_dfu())
+        bad_native = self.native.read_bytes()
+
+        manifest["files"]["firmware.dfu"] = {
+            "size": len(bad_dfu),
+            "sha256": firmware.digest(bytes(bad_dfu)),
+        }
+        manifest["native_tgz"]["size"] = len(bad_native)
+        manifest["native_tgz"]["sha256"] = firmware.digest(bad_native)
+        entries["SHA256-manifest.json"] = (
+            json.dumps(manifest, indent=2, sort_keys=True) + "\n"
+        ).encode()
+        entries[self.native.name] = bad_native
+        self.assertEqual(
+            firmware.digest(bad_native), manifest["native_tgz"]["sha256"]
+        )
+
+        rebuilt = self.root / "coherently-rehashed-bad-dfu.tar.gz"
+        with tarfile.open(rebuilt, "w:gz") as archive:
+            for name, payload in entries.items():
+                item = tarfile.TarInfo(name)
+                item.size = len(payload)
+                archive.addfile(item, io.BytesIO(payload))
+
+        # Exercise the actual delivery verifier end-to-end, not merely the
+        # low-level validate_dfu_crc() helper.
         with self.assertRaisesRegex(ValueError, "DFU file CRC mismatch"):
-            firmware.validate_dfu_crc(dfu)
+            firmware.verify_package(rebuilt)
 
     def test_reject_missing_native_tgz(self):
         self.native.unlink()
