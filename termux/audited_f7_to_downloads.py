@@ -116,14 +116,17 @@ def save_verified_to_downloads(downloads: Path, filename: str, blob: bytes) -> P
             print("Verified .tgz already in Android Downloads; existing identical file preserved.")
             return target
         raise DeliveryError("An older/different firmware file with this name exists in Downloads; not overwritten")
-    # Create exclusively. Failed writes are removed, never partially presented.
+    # Create exclusively. A racing pre-existing file is NEVER deleted.
+    created = False
     try:
         with target.open("xb") as stream:
+            created = True
             stream.write(blob)
         if file_digest(target) != sha256(blob):
             raise DeliveryError("Copied firmware checksum failed")
     except BaseException:
-        target.unlink(missing_ok=True)
+        if created:
+            target.unlink(missing_ok=True)
         raise
     return target
 
