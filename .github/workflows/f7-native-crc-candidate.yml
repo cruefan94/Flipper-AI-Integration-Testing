@@ -1,0 +1,25 @@
+# Test an exact, pinned private Momentum F7 firmware build against the
+# public-safe CRC packaging gate. The reusable build uploads only encrypted
+# UNTESTED artifacts; no device flash or public firmware source export.
+name: F7 CRC-gated native build (encrypted, UNTESTED)
+
+on:
+  push:
+    branches: [fix/f7-dfu-crc-preflash-gate-20261116]
+    paths:
+      - 'scripts/prepare_momentum_flash_package.py'
+      - 'tests/test_momentum_flash_package.py'
+      - '.github/workflows/f7-native-crc-candidate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: f7-crc-native-candidate-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  pinned-private-f7:
+    uses: ./.github/workflows/private-momentum-ai-build.yml
+    secrets: inherit

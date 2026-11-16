@@ -1,0 +1,46 @@
+name: F7 firmware DFU CRC gate (synthetic, no hardware)
+
+on:
+  push:
+    branches:
+      - fix/f7-dfu-crc-preflash-gate-20261116
+    paths:
+      - 'scripts/prepare_momentum_flash_package.py'
+      - 'tests/test_momentum_flash_package.py'
+      - 'tests/test_unified_esp32_release.py'
+      - 'tests/test_esp_flasher_delivery.py'
+      - '.github/workflows/f7-dfu-crc-gate.yml'
+  pull_request:
+    paths:
+      - 'scripts/prepare_momentum_flash_package.py'
+      - 'tests/test_momentum_flash_package.py'
+      - 'tests/test_unified_esp32_release.py'
+      - 'tests/test_esp_flasher_delivery.py'
+      - '.github/workflows/f7-dfu-crc-gate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dfu-crc-synthetic:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    strategy:
+      matrix:
+        python-version: ['3.11', '3.12']
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Python syntax and regression tests for Flipper DFU suffix CRC
+        run: |
+          python -m py_compile scripts/prepare_momentum_flash_package.py tests/test_momentum_flash_package.py
+          python -m unittest discover -s tests -p 'test_momentum_flash_package.py' -v
+          python -m unittest discover -s tests -p 'test_esp_flasher_delivery.py' -v
+          python -m unittest discover -s tests -p 'test_unified_esp32_release.py' -v
+      - name: Report limitations
+        run: echo 'Synthetic DFU test only. No Flipper device, qFlipper or private firmware binary accessed.'
