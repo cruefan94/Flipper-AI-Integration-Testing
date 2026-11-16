@@ -98,7 +98,13 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - uses: android-actions/setup-android@v3
+      - name: Check GitHub-hosted Android SDK without legacy tools package
+        shell: bash
+        run: |
+          set -euo pipefail
+          : "${ANDROID_HOME:?Missing preinstalled Android SDK on hosted runner}"
+          command -v sdkmanager
+          sdkmanager --version
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.10.2'
