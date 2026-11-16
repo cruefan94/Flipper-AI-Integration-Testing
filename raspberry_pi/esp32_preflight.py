@@ -29,9 +29,20 @@ def inspect_port(name):
     result = {'port': name, 'category': classify_port(name),
               'exists': path.exists(), 'character_device': False,
               'read_write_access': False, 'safe_to_flash': False}
-    if path.exists():
-        result['character_device'] = stat.S_ISCHR(path.stat().st_mode)
-        result['read_write_access'] = os.access(path, os.R_OK | os.W_OK)
+    # A missing/broken symlink or a disappearing USB device must never crash
+    # diagnostics or be interpreted as authorization to flash.
+    try:
+        info = path.stat()
+    except (OSError, ValueError) as exc:
+        result['inspection_error'] = type(exc).__name__
+        return result
+    result['exists'] = True
+    result['character_device'] = stat.S_ISCHR(info.st_mode)
+    # Symlinks can change between stat and access; this is advisory only.
+    try:
+        result['read_write_access'] = bool(result['character_device'] and os.access(path, os.R_OK | os.W_OK))
+    except (OSError, ValueError) as exc:
+        result['inspection_error'] = type(exc).__name__
     return result
 
 
@@ -44,6 +55,7 @@ def report(ports):
             'ports': [inspect_port(p) for p in ports],
             'notes': [
                 'Port detection does not prove an ESP32 is attached.',
+                'USB devices may disconnect or change identity after inspection; never treat this report as flashing authorization.',
                 'ESP32-WROOM ROM download mode: hold GPIO0/BOOT LOW while resetting EN, then release BOOT.',
                 'Common ground and 3.3 V UART logic are mandatory; never feed 5 V into ESP32 GPIO.',
                 'For Pi USB flashing, prefer a known-good data cable and dedicated ESP32 USB-UART adapter.',
