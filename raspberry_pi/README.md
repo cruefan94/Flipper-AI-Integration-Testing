@@ -117,3 +117,25 @@ Only the verified native Flipper Zero F7 .tgz should be used for the eventual up
 - Optional AI service requires user-set API key and explicit prompt; status is sent to API only with --with-diagnostics.
 - qFlipper GUI launch requires owner confirmation on the Pi keyboard.
 - Works only once installed and authorized on the physical Pi; CI is not a substitute for device testing.
+
+
+## 6. Prepare pinned audited newer F7 firmware directly on Pi (no phone transfer)
+
+Once qFlipper recognizes your Flipper and you have a backup, leave the old recovery firmware alone. Run on the Raspberry Pi:
+
+~~~sh
+cd "$HOME/flipper-ai-pi"
+git pull --ff-only
+sudo apt install -y openssl
+python3 raspberry_pi/prepare_audited_f7.py
+~~~
+
+The pinned helper checks successful GitHub Actions run 43782149547, exact non-expired artifact 14189530383, downloads its encrypted delivery through your logged-in gh CLI, prompts for the privately held ARTIFACT passphrase on the Pi (hidden input; not the GitHub password), checks the exact audited source revision 642e267612f1c555c60eb0db2ec167f5d2ab036f, and verifies each native F7 firmware SHA256 through the pinned public validator.
+
+Verified output is written to ~/FlipperAI_ReadyToFlash/ and neither the original mntm-012 file nor the Flipper device is changed.
+
+Only when the script reports SUCCESS and the source revision/hash verification should you locate the new TGZ under FlipperAI_ReadyToFlash and use qFlipper Advanced controls -> Install from file (custom firmware) if available. Do not use the normal Update Channel control, which selects official channels rather than this audited build. Verify the exact path and filename in the GUI before clicking install.
+
+Because this firmware is not hardware-tested, keep the charged Flipper connected to the Pi with a reliable USB data cable, preserve the backups and recovery TGZ, and confirm a microSD card is inserted. If the file/install control is missing or the artifact has expired/decryption fails, stop rather than attempting a different candidate.
+
+No AI bridge command can flash firmware. This remains a manual and explicitly approved action in qFlipper.
