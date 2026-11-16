@@ -1,0 +1,45 @@
+name: ESP32 read-only preview regression (public-safe)
+on:
+  push:
+    branches:
+      - lab/esp32-preview-offline-ci-20261116
+    paths:
+      - 'lab/esp32_flash_plan.py'
+      - 'lab/test_esp32_flash_plan.py'
+      - '.github/workflows/esp32-preview-offline-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  preview-only:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    strategy:
+      matrix:
+        python-version: ['3.11', '3.12']
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Compile and execute hardware-free unit tests
+        run: |
+          python -m py_compile lab/esp32_flash_plan.py lab/test_esp32_flash_plan.py
+          PYTHONPATH=lab python -m unittest discover -s lab -p 'test_esp32_flash_plan.py' -v
+      - name: Smoke-test read-only CLI output
+        run: |
+          python lab/esp32_flash_plan.py --chip esp32 --port /dev/ttyUSB0 > preview.json
+          python - <<'PY'
+          import json
+          with open('preview.json', encoding='utf-8') as f:
+              p = json.load(f)
+          assert p['executed'] is False
+          assert p['chip'] == 'esp32'
+          assert p['preview_argv'][-1] == 'chip_id'
+          PY
+      - name: State test boundary
+        run: echo "Synthetic preview only; no connected devices, firmware, secrets, or flashing."
