@@ -6,7 +6,25 @@ import unittest
 from unittest.mock import patch
 
 from raspberry_pi.pi_browser_dashboard import BrowserAdvicePanel
-from tests.test_pi_browser_lifecycle import panel_fixture
+class DummyLabel:
+    def __init__(self):
+        self.text = None
+
+    def configure(self, *, text):
+        self.text = text
+
+
+def panel_fixture():
+    panel = BrowserAdvicePanel.__new__(BrowserAdvicePanel)
+    panel.closed = False
+    panel.interval_ms = 10000
+    panel.timer_id = None
+    panel.memory = DummyLabel()
+    panel.advice = DummyLabel()
+    events = []
+    panel.after = lambda interval, callback: events.append(("schedule", interval)) or "next"
+    panel.after_cancel = lambda timer_id: events.append(("cancel", timer_id))
+    return panel, events
 
 
 GOOD = {
