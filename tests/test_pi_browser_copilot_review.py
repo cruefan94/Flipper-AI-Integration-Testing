@@ -3,9 +3,12 @@
 No Tk root, Pi hardware, process control or system configuration changes.
 """
 import unittest
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 from raspberry_pi.pi_browser_dashboard import BrowserAdvicePanel
+from raspberry_pi.pi_browser_memory_advisor import browser_budget, snapshot
 class DummyLabel:
     def __init__(self):
         self.text = None
@@ -83,6 +86,46 @@ class BrowserPanelReviewRegressions(unittest.TestCase):
             callbacks[0]()
             self.assertEqual(read.call_count, 1)
         self.assertEqual(events, [("cancel", "timer")])
+
+
+class BrowserBudgetBoundaryRegressions(unittest.TestCase):
+    def test_pressure_thresholds_and_read_only_contract(self):
+        # Inputs are procfs KiB; thresholds are strict: <10%, <25%.
+        for available, expected in (
+            (0, "critical"), (999, "critical"), (1000, "constrained"),
+            (2499, "constrained"), (2500, "comfortable"),
+            (10000, "comfortable"),
+        ):
+            with self.subTest(available_kib=available):
+                result = browser_budget({"MemTotal": 10000, "MemAvailable": available})
+                self.assertEqual(result["status"], expected)
+                self.assertIs(result["read_only"], True)
+                self.assertTrue(result["recommendations"])
+
+    def test_invalid_counters_fail_closed(self):
+        for total, available in (
+            (None, 100), (0, 0), (True, 0), (100, True),
+            (100, -1), (100, 101), ("100", 50),
+        ):
+            with self.subTest(total=total, available=available):
+                result = browser_budget({"MemTotal": total, "MemAvailable": available})
+                self.assertEqual(result["status"], "unavailable")
+                self.assertIs(result["read_only"], True)
+                self.assertIsNone(result["available_mib"])
+
+    def test_snapshot_reads_synthetic_meminfo_only(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "proc").mkdir()
+            (root / "proc" / "meminfo").write_text(
+                "MemTotal:       4194304 kB\\n"
+                "MemAvailable:   524288 kB\\n", encoding="utf-8"
+            )
+            result = snapshot(root)
+            self.assertEqual(result["status"], "constrained")
+            self.assertEqual(result["total_mib"], 4096)
+            self.assertEqual(result["available_mib"], 512)
+            self.assertIs(result["read_only"], True)
 
 
 if __name__ == "__main__":
