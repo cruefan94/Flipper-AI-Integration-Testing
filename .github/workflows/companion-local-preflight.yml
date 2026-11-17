@@ -1,0 +1,37 @@
+name: Flipper AI companion phone/Pi no-hardware preflight
+
+on:
+  pull_request:
+    paths:
+      - 'termux/start_flipper_llama.sh'
+      - 'termux/test_start_flipper_llama.py'
+      - 'raspberry_pi/pi_project_readiness.py'
+      - 'tests/test_pi_project_readiness.py'
+      - '.github/workflows/companion-local-preflight.yml'
+  push:
+    branches:
+      - 'feature/termux-llama-and-pi-device-preflight-20261116'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  no-hardware:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Validate shell syntax and Python imports
+        run: |
+          sh -n termux/start_flipper_llama.sh
+          python3 -m py_compile raspberry_pi/pi_project_readiness.py tests/test_pi_project_readiness.py termux/test_start_flipper_llama.py
+      - name: Synthetic Termux and Pi device tests
+        run: |
+          python3 -m unittest discover -s termux -p 'test_start_flipper_llama.py' -v
+          python3 -m unittest discover -s tests -p 'test_pi_project_readiness.py' -v
+      - name: Audit outcome
+        run: echo 'Synthetic only; no device, model weights, secret, flashing or Pi shell access was used.'
