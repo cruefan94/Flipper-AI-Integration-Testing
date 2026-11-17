@@ -5,6 +5,7 @@ during reset selects UART download mode on classic ESP32; EN must be high
 after reset release. ESP32-S2 is intentionally not covered by this model.
 """
 from dataclasses import dataclass
+import math
 import unittest
 
 @dataclass(frozen=True)
@@ -23,9 +24,9 @@ def review(s: Snapshot) -> tuple[str, tuple[str, ...]]:
         reasons.append("unsupported board; separate S2 procedure required")
     if s.en not in ("high", "low", "unknown") or s.gpio0 not in ("high", "low", "unknown"):
         reasons.append("invalid logic observation")
-    if not 3.0 <= s.supply_v <= 3.6:
+    if not isinstance(s.supply_v, (int, float)) or not math.isfinite(s.supply_v) or not 3.0 <= s.supply_v <= 3.6:
         reasons.append("supply outside nominal 3.3V domain; verify board regulator")
-    if not 0 <= s.uart_voltage_v <= 3.6:
+    if not isinstance(s.uart_voltage_v, (int, float)) or not math.isfinite(s.uart_voltage_v) or not 0 <= s.uart_voltage_v <= 3.6:
         reasons.append("UART level unsafe or unknown")
     if not s.ground_shared:
         reasons.append("common ground unverified")
@@ -60,6 +61,12 @@ class ReviewTests(unittest.TestCase):
     def test_unknown_en(self): self.check("BLOCKED", en="unknown")
     def test_invalid_logic(self): self.check("BLOCKED", gpio0="floating")
     def test_negative_uart(self): self.check("BLOCKED", uart_voltage_v=-1)
+    def test_nan_supply(self): self.check("BLOCKED", supply_v=float('nan'))
+    def test_inf_supply(self): self.check("BLOCKED", supply_v=float('inf'))
+    def test_nan_uart(self): self.check("BLOCKED", uart_voltage_v=float('nan'))
+    def test_inf_uart(self): self.check("BLOCKED", uart_voltage_v=float('inf'))
+    def test_invalid_supply_type(self): self.check("BLOCKED", supply_v='unknown')
+    def test_invalid_uart_type(self): self.check("BLOCKED", uart_voltage_v=None)
 
 if __name__ == "__main__":
     unittest.main()
