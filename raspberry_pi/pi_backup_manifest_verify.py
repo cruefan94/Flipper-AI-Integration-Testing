@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 import stat
 from pathlib import Path, PurePosixPath
@@ -65,9 +66,17 @@ def verify_manifest(backup_root: Path, manifest: dict) -> dict:
             if not stat.S_ISREG(path.lstat().st_mode):
                 results.append({"status": "not_regular_file"})
                 continue
-            actual = hashlib.sha256()
-            total = 0
-            with path.open("rb") as stream:
+            # Recheck the opened descriptor: a path can change after lstat().
+            # O_NOFOLLOW prevents a final-component symlink swap; O_NONBLOCK
+            # avoids hanging on a substituted FIFO. Never open for writing.
+            flags = os.O_RDONLY | os.O_CLOEXEC | os.O_NOFOLLOW | os.O_NONBLOCK
+            fd = os.open(path, flags)
+            with os.fdopen(fd, "rb") as stream:
+                if not stat.S_ISREG(os.fstat(stream.fileno()).st_mode):
+                    results.append({"status": "not_regular_file"})
+                    continue
+                actual = hashlib.sha256()
+                total = 0
                 while chunk := stream.read(_CHUNK):
                     total += len(chunk)
                     actual.update(chunk)
