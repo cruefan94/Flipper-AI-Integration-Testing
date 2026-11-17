@@ -16,6 +16,7 @@ def classify(records):
         return "INSUFFICIENT_EVIDENCE"
     seen = set()
     streak = {}
+    triggered = False
     for row in records:
         if not isinstance(row, dict) or set(row) != FIELDS:
             return "INSUFFICIENT_EVIDENCE"
@@ -34,10 +35,10 @@ def classify(records):
         if row["conclusion"] in FAIL:
             streak[key] = streak.get(key, 0) + 1
             if streak[key] >= 2:
-                return "FALLBACK_REQUIRED"
+                triggered = True
         else:
             streak[key] = 0
-    return "NO_TRIGGER"
+    return "FALLBACK_REQUIRED" if triggered else "NO_TRIGGER"
 
 def main():
     try:
