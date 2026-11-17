@@ -1,0 +1,51 @@
+name: Pi backup readiness isolated regressions
+
+on:
+  pull_request:
+    paths:
+      - 'raspberry_pi/pi_backup*.py'
+      - 'raspberry_pi/tests/test_pi_backup*.py'
+      - 'raspberry_pi/tests/test_pi_readiness*.py'
+      - '.github/workflows/pi-backup-readiness-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backup-readiness:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.11', '3.12']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Compile isolated Pi backup modules
+        run: |
+          python -m compileall -q raspberry_pi
+      - name: Discover and execute backup and readiness regression suites
+        run: |
+          python - <<'PY'
+          import pathlib
+          import unittest
+          root = pathlib.Path('raspberry_pi/tests')
+          patterns = ('test_pi_backup*.py', 'test_pi_readiness*.py')
+          files = sorted({str(p) for pattern in patterns for p in root.glob(pattern)})
+          if not files or not any('readiness_privacy_contract' in p for p in files):
+              raise SystemExit('Required Pi backup/readiness test suite missing')
+          loader = unittest.TestLoader()
+          suite = unittest.TestSuite()
+          for pattern in patterns:
+              suite.addTests(loader.discover(str(root), pattern=pattern, top_level_dir='.'))
+          count = suite.countTestCases()
+          print(f'Discovered {count} tests across {len(files)} Pi backup/readiness files')
+          if count < 4:
+              raise SystemExit('Insufficient discovered backup/readiness regression tests')
+          result = unittest.TextTestRunner(verbosity=2).run(suite)
+          if not result.wasSuccessful():
+              raise SystemExit(1)
+          PY
