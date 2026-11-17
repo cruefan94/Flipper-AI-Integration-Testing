@@ -1,0 +1,10 @@
+App(
+    appid="flipper_esp_manager",
+    name="ESP32 Manager",
+    apptype=FlipperAppType.EXTERNAL,
+    entry_point="esp_manager_app",
+    requires=["gui"],
+    stack_size=3072,
+    fap_category="GPIO",
+    fap_version=(0, 1),
+)
