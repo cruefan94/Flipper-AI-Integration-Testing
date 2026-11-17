@@ -23,6 +23,6 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Compile verifier and synthetic tests
-        run: python -m py_compile raspberry_pi/pi_backup_manifest_verify.py tests/test_pi_backup_manifest_verify.py tests/test_pi_backup_filesystem_safety.py tests/test_pi_backup_descriptor_safety.py
+        run: python -m py_compile raspberry_pi/pi_backup_manifest_verify.py tests/test_pi_backup_manifest_verify.py tests/test_pi_backup_filesystem_safety.py tests/test_pi_backup_descriptor_safety.py tests/test_pi_backup_directory_confinement.py
       - name: Run backup verifier synthetic regressions
         run: python -m unittest discover -s tests -p 'test_pi_backup*.py' -v
