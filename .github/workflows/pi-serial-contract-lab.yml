@@ -1,0 +1,27 @@
+name: Pi serial contract offline lab
+on:
+  push:
+    branches:
+      - lab/pi-serial-contract-ci-20261117-0628
+  pull_request:
+    paths:
+      - 'lab/pi_serial_contract_20261117.py'
+      - 'tests/test_pi_serial_contract_20261117.py'
+      - '.github/workflows/pi-serial-contract-lab.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Python syntax check
+        run: python3 -m py_compile lab/pi_serial_contract_20261117.py tests/test_pi_serial_contract_20261117.py
+      - name: Run exact-source synthetic tests
+        run: python3 -m unittest discover -s tests -p 'test_pi_serial_contract_20261117.py' -v
