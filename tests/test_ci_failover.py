@@ -86,6 +86,23 @@ class FailoverPolicyTest(unittest.TestCase):
             repo=ANDROID)
         self.assertEqual(items[0]["kind"], "contract")
 
+    def test_native_f7_private_candidate_routes_firmware_fallback(self):
+        # Exact private workflow title; never treat a DFU release gate as
+        # an unmapped diagnostic-only fallback.
+        name = "Flipper AI1 Momentum F7 - PRIVATE candidate compile and DFU gate"
+        self.assertEqual(module.kind_for(FW, name), "firmware")
+        items = self.candidates(run(2, 1, name=name), run(1, 2, name=name))
+        self.assertEqual(len(items), 1)
+        self.assertEqual(items[0]["kind"], "firmware")
+        self.assertEqual(items[0]["reason"], "two_consecutive_failures")
+
+    def test_native_f7_fallback_keeps_source_reference_only(self):
+        name = "Flipper AI1 Momentum F7 - PRIVATE candidate compile and DFU gate"
+        items = self.candidates(run(2, 1, name=name), run(1, 2, name=name))
+        self.assertEqual(set(items[0]), {"repo", "run", "branch", "kind", "reason"})
+        self.assertNotIn("source", items[0])
+        self.assertNotIn("binary", items[0])
+
     def test_unmapped_private_workflow_marked_diagnostic(self):
         self.assertEqual(module.kind_for(FW, "Other extra-app build"), "diagnostic")
 
