@@ -211,12 +211,29 @@ jobs:
           python3 scripts/prepare_momentum_flash_package.py verify \
             --archive "$RUNNER_TEMP/firmware-delivery/roundtrip.tar.gz"
           rm -rf "$RUNNER_TEMP/firmware-delivery"
-          echo "Native Momentum F7 .tgz validated, encrypted, and plaintext removed."
+          # The encrypted delivery is uniquely identifiable in Android Downloads.
+          # DO NOT rename the native flipper-z-f7-update-*.tgz inside the archive:
+          # the official firmware updater expects its original packaging.
+          BUILD_DATE="$(date -u +%Y%m%d)"
+          SHORT_SOURCE="${EXPECTED_PRIVATE_SHA:0:8}"
+          LABEL="MomentumAI1-F7_${BUILD_DATE}_run${GITHUB_RUN_ID}-a${GITHUB_RUN_ATTEMPT}_sha${SHORT_SOURCE}_ENCRYPTED-UNTESTED"
+          ENCRYPTED_NAME="${LABEL}.tar.gz.enc"
+          CHECKSUM_NAME="${LABEL}.sha256"
+          mv "$RUNNER_TEMP/flipper-ai-native-tgz-delivery.tar.gz.enc" "$RUNNER_TEMP/$ENCRYPTED_NAME"
+          (cd "$RUNNER_TEMP" && sha256sum "$ENCRYPTED_NAME" > "$CHECKSUM_NAME")
+          test -s "$RUNNER_TEMP/$ENCRYPTED_NAME"
+          (cd "$RUNNER_TEMP" && sha256sum -c "$CHECKSUM_NAME")
+          echo "FIRMWARE_ARTIFACT_NAME=$LABEL" >> "$GITHUB_ENV"
+          echo "FIRMWARE_ENCRYPTED_NAME=$ENCRYPTED_NAME" >> "$GITHUB_ENV"
+          echo "FIRMWARE_CHECKSUM_NAME=$CHECKSUM_NAME" >> "$GITHUB_ENV"
+          echo "Native Momentum F7 .tgz validated, encrypted, uniquely named, and plaintext removed."
       - name: Upload encrypted firmware package only
         uses: actions/upload-artifact@v4
         with:
-          name: encrypted-flipper-ai-mobile-native-tgz-UNTESTED
-          path: ${{ runner.temp }}/flipper-ai-native-tgz-delivery.tar.gz.enc
+          name: ${{ env.FIRMWARE_ARTIFACT_NAME }}
+          path: |
+            ${{ runner.temp }}/${{ env.FIRMWARE_ENCRYPTED_NAME }}
+            ${{ runner.temp }}/${{ env.FIRMWARE_CHECKSUM_NAME }}
           if-no-files-found: error
           retention-days: 7
       - name: Report verified scope without publishing private binaries
