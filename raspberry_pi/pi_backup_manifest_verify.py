@@ -43,7 +43,7 @@ def verify_manifest(backup_root: Path, manifest: dict) -> dict:
     except OSError:
         return {"ok": False, "results": [{"status": "invalid_root"}]}
     entries = manifest.get("files") if isinstance(manifest, dict) else None
-    if not isinstance(entries, list):
+    if not isinstance(entries, list) or not entries:
         return {"ok": False, "results": [{"status": "invalid_manifest"}]}
     results = []
     seen = set()
