@@ -32,6 +32,9 @@ class FallbackIdentityTests(unittest.TestCase):
     def test_unknown_field_rejected(self):
         row = attempt(1); row["token"] = "redacted"
         self.assertEqual(module.classify([row]), "INSUFFICIENT_EVIDENCE")
+    def test_late_malformed_evidence_fails_closed(self):
+        bad = attempt(3); bad["private_log"] = "forbidden"
+        self.assertEqual(module.classify([attempt(1), attempt(2), bad]), "INSUFFICIENT_EVIDENCE")
     def test_empty_is_unknown(self):
         self.assertEqual(module.classify([]), "INSUFFICIENT_EVIDENCE")
 
