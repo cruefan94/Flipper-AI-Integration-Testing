@@ -28,9 +28,12 @@ def summarize_readiness(verification: object) -> dict:
         return invalid
     statuses = []
     for item in results:
-        if not isinstance(item, dict) or item.get("status") not in _ALLOWED:
+        if not isinstance(item, dict):
             return invalid
-        statuses.append(item["status"])
+        status = item.get("status")
+        if not isinstance(status, str) or status not in _ALLOWED:
+            return invalid
+        statuses.append(status)
     passed = statuses.count("ok")
     consistent = (
         verification.get("ok") is True
