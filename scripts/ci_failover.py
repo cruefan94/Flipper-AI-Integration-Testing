@@ -71,7 +71,7 @@ def kind_for(repo: str, name: str) -> str:
     if repo == MONITORED[0]:
         if "android" in lower and ("apk" in lower or "satellite" in lower):
             return "android"
-        if any(s in lower for s in ("flash candidate", "custom momentum", "build flipper ai", "firmware")):
+        if any(s in lower for s in ("flash candidate", "custom momentum", "build flipper ai", "firmware", "momentum f7", "dfu gate")):
             return "firmware"
         if any(s in lower for s in ("ai satellite", "gatt", "session", "ble", "protocol")):
             return "protocol"
