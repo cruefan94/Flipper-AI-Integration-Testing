@@ -118,8 +118,8 @@ class BrowserBudgetBoundaryRegressions(unittest.TestCase):
             root = Path(directory)
             (root / "proc").mkdir()
             (root / "proc" / "meminfo").write_text(
-                "MemTotal:       4194304 kB\\n"
-                "MemAvailable:   524288 kB\\n", encoding="utf-8"
+                "MemTotal:       4194304 kB\n"
+                "MemAvailable:   524288 kB\n", encoding="utf-8"
             )
             result = snapshot(root)
             self.assertEqual(result["status"], "constrained")
