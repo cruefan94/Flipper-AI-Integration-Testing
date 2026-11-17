@@ -145,3 +145,34 @@ Output stays private at `~/flipper-ai-workspace/firmware-updates/` by default. T
 **The private artifact passphrase is not retrievable from the GitHub Actions secret.** If you don't know it, reset `FLIPPER_ARTIFACT_PASSPHRASE` in GitHub Actions repository secrets and run a new firmware build. **Never send the passphrase into chat, a GitHub issue, or a command-line argument.** Run this tool *locally with a visible prompt*, not from the remote bridge's noninteractive approved shell operation.
 
 This helper is not a release endorsement. It checks archive integrity and that the package targets Flipper Zero F7, not whether the experimental AI firmware boots. Have a known-good Momentum update and a confirmed qFlipper/DFU recovery method before choosing to flash the native `.tgz`. The firmware itself remains experimental and hardware-untested.
+
+
+## Optional Android offline llama.cpp setup (no automatic downloads)
+
+The Android Satellite **USE LLAMA.CPP (TERMUX SERVER)** option calls an
+OpenAI-compatible model on the **same phone**, at
+`http://127.0.0.1:9931/v1/chat/completions` with alias `flipper-local`.
+A failure to connect to `127.0.0.1:9931` usually means no server is listening,
+not that Bluetooth pairing failed. The already-working embedded LiteRT model
+remains the simpler default.
+
+The new source-only helper `termux/start_flipper_llama.sh` **never downloads
+weights, flashes hardware, requests a token, or opens a LAN listener**.
+Install a compatible official llama.cpp `llama-server` executable and a small
+legally available GGUF model separately, then from your Termux project checkout:
+
+~~~sh
+sh termux/start_flipper_llama.sh start /absolute/path/to/model.gguf
+~~~
+
+Leave that Termux session running while the phone AI app tests the server.
+In a second Termux session, its local health endpoint can be checked with:
+
+~~~sh
+sh termux/start_flipper_llama.sh status
+~~~
+
+This is a **development-only helper**; Android power saving can stop Termux,
+model loading can take time, and no real-phone inference has yet been verified.
+If it fails, switch back to the installed LiteRT AI in the Android app rather
+than automatically retrying, exposing port 9931 to Wi-Fi, or changing firmware.
