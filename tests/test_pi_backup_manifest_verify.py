@@ -49,6 +49,15 @@ class BackupManifestTests(unittest.TestCase):
                       {"path": "test.bin"}):
             self.assertEqual(self.check([entry])["results"][0]["status"], "invalid_entry")
 
+    def test_empty_manifest_is_not_a_verified_backup(self):
+        result = self.check([])
+        self.assertFalse(result["ok"])
+        self.assertEqual(result["results"][0]["status"], "invalid_manifest")
+
+    def test_nonempty_manifest_still_verifies(self):
+        result = self.check([self.entry])
+        self.assertTrue(result["ok"])
+
     def test_bad_manifest_and_missing_root(self):
         self.assertFalse(verify_manifest(self.backup, {"files": "wrong"})["ok"])
         self.assertFalse(verify_manifest(self.root / "missing", {"files": []})["ok"])
