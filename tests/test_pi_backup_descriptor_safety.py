@@ -29,6 +29,28 @@ class DescriptorSafetyTests(unittest.TestCase):
         with patch("raspberry_pi.pi_backup_manifest_verify._safe_path", return_value=link):
             result = verify_manifest(self.root, {"files": [self.entry]})
         self.assertFalse(result["ok"])
+        self.assertEqual(result["results"][0]["status"], "not_regular_file")
+
+    def test_symlink_substituted_at_open_is_not_followed(self):
+        # The initial lstat sees a regular file; replace it at the open boundary.
+        # This verifies O_NOFOLLOW, rather than only pre-open path validation.
+        target = self.root / "other.bin"
+        target.write_bytes(b"other synthetic data")
+        original_open = os.open
+        swapped = False
+
+        def swap_then_open(path, flags, *args, **kwargs):
+            nonlocal swapped
+            if not swapped and Path(path) == self.root / "good.bin":
+                swapped = True
+                (self.root / "good.bin").unlink()
+                (self.root / "good.bin").symlink_to(target)
+            return original_open(path, flags, *args, **kwargs)
+
+        with patch("raspberry_pi.pi_backup_manifest_verify.os.open", side_effect=swap_then_open):
+            result = verify_manifest(self.root, {"files": [self.entry]})
+        self.assertTrue(swapped)
+        self.assertFalse(result["ok"])
         self.assertEqual(result["results"][0]["status"], "read_error")
 
     @unittest.skipUnless(hasattr(os, "mkfifo"), "POSIX FIFO required")
