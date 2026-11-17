@@ -139,3 +139,19 @@ Only when the script reports SUCCESS and the source revision/hash verification s
 Because this firmware is not hardware-tested, keep the charged Flipper connected to the Pi with a reliable USB data cable, preserve the backups and recovery TGZ, and confirm a microSD card is inserted. If the file/install control is missing or the artifact has expired/decryption fails, stop rather than attempting a different candidate.
 
 No AI bridge command can flash firmware. This remains a manual and explicitly approved action in qFlipper.
+
+## Optional no-write desktop readiness report
+
+The Pi development branch adds an independent check that does not require the
+Flipper, ESP32, or phone to be connected. From the testing repository checkout:
+
+~~~sh
+python3 raspberry_pi/pi_readiness.py
+~~~
+
+It reports whether qFlipper is installed and lists USB serial metadata from
+Linux sysfs without opening any serial ports. USB labels/VID/PID are clues,
+**not proof** of a working Flipper or ESP32. The report explicitly marks both
+links unverified until the actual Pi desktop and attached boards are tested.
+This helper does not install drivers, update firmware or run commands on the
+connected boards. It is a preflight alongside existing Pi bridge diagnostics.
