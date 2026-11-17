@@ -41,7 +41,8 @@ class DescriptorSafetyTests(unittest.TestCase):
 
         def swap_then_open(path, flags, *args, **kwargs):
             nonlocal swapped
-            if not swapped and Path(path) == self.root / "good.bin":
+            # Confined opens use a relative filename plus the pinned dir_fd.
+            if not swapped and path == "good.bin" and kwargs.get("dir_fd") is not None:
                 swapped = True
                 (self.root / "good.bin").unlink()
                 (self.root / "good.bin").symlink_to(target)
