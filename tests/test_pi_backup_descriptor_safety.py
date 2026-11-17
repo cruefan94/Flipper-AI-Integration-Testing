@@ -19,6 +19,22 @@ class DescriptorSafetyTests(unittest.TestCase):
         self.entry = {"path": "good.bin", "size": len(self.payload),
                       "sha256": hashlib.sha256(self.payload).hexdigest()}
 
+    def test_content_hash_mismatch_fails_closed_without_path_disclosure(self):
+        altered = dict(self.entry, sha256=hashlib.sha256(b"wrong").hexdigest())
+        result = verify_manifest(self.root, {"files": [altered]})
+        self.assertFalse(result["ok"])
+        self.assertEqual(result["results"][0]["status"], "mismatch")
+        self.assertNotIn(str(self.root), str(result))
+        self.assertNotIn("good.bin", str(result))
+
+    def test_size_mismatch_fails_closed_without_path_disclosure(self):
+        altered = dict(self.entry, size=len(self.payload) + 1)
+        result = verify_manifest(self.root, {"files": [altered]})
+        self.assertFalse(result["ok"])
+        self.assertEqual(result["results"][0]["status"], "mismatch")
+        self.assertNotIn(str(self.root), str(result))
+        self.assertNotIn("good.bin", str(result))
+
     def test_regular_file_still_verifies(self):
         self.assertTrue(verify_manifest(self.root, {"files": [self.entry]})["ok"])
 
