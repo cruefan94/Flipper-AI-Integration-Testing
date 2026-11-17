@@ -5,7 +5,7 @@ on:
       source_sha:
         type: string
         required: false
-        default: '4edfac791f9f297c8fae5e5f9cda136ff457e463'
+        default: '1c51c08f384d5538f60580600c7c42bf1680ca1e'
       source_branch:
         type: string
         required: false
@@ -21,7 +21,7 @@ on:
         description: 'Exact private firmware source commit (40 hex chars)'
         required: false
         type: string
-        default: '4edfac791f9f297c8fae5e5f9cda136ff457e463'
+        default: '1c51c08f384d5538f60580600c7c42bf1680ca1e'
       source_branch:
         description: 'Private source branch to audit (no firmware published)'
         required: false
@@ -33,7 +33,7 @@ on:
 permissions:
   contents: read
 env:
-  EXPECTED_PRIVATE_SHA: ${{ inputs.source_sha || '4edfac791f9f297c8fae5e5f9cda136ff457e463' }}
+  EXPECTED_PRIVATE_SHA: ${{ inputs.source_sha || '1c51c08f384d5538f60580600c7c42bf1680ca1e' }}
   EXPECTED_PRIVATE_BRANCH: ${{ inputs.source_branch || 'feature/momentum-ai1-next-flash-20261117' }}
 jobs:
   custom-firmware:
@@ -62,6 +62,8 @@ jobs:
           persist-credentials: false
       - name: Test native updater packaging with synthetic fixtures
         run: python3 -m unittest discover -s tests -p 'test_momentum_flash_package.py' -v
+      - name: Verify exact private SHA pin and no unencrypted publication
+        run: python3 -m unittest discover -s tests -p 'test_ai1_fallback_exact_sha.py' -v
       - name: Fetch private AI source without persisting credentials
         env:
           PRIVATE_TOKEN: ${{ secrets.FLIPPER_PRIVATE_SOURCE_TOKEN }}
