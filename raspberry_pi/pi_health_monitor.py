@@ -67,11 +67,13 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--interval", type=int, default=10)
     parser.add_argument("--once", action="store_true")
+    parser.add_argument("--root", type=Path, default=Path("/"),
+                        help="Read-only Pi OS root or synthetic fixture directory")
     args = parser.parse_args()
     if args.interval < 10:
         parser.error("interval must be at least 10 seconds")
     while True:
-        print(json.dumps(snapshot(), sort_keys=True), flush=True)
+        print(json.dumps(snapshot(args.root), sort_keys=True), flush=True)
         if args.once:
             break
         time.sleep(args.interval)
