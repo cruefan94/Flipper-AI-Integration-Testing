@@ -1,0 +1,20 @@
+# Exact-head unified release evidence handoff — 2026-11-17 07:02 ET
+
+This document is **public-safe process metadata**, not a release approval. No private firmware source, binary, logs, credentials, hardware identifiers, or personal diagnostics are included.
+
+## Newly verified evidence
+- Integration evidence-gate draft PR #77: commit `693d61fa7e9d7170733bf609bef673122f7c898c`, public smoke workflow run [44069721369](https://github.com/cruefan94/Flipper-AI-Integration-Testing/actions/runs/44069721369) **completed successfully**. This establishes that the PR's public smoke workflow succeeded on the exact commit, **not** that the Android or F7 candidate passes its release gates.
+- Android AI1 policy-transition draft PR #61: commit `d9421962de77c37f49b8ee60bd249909a9e4154b`, combined APK workflow run [44059283296](https://github.com/cruefan94/Flipper-AI-Android-Satellite/actions/runs/44059283296) **completed successfully**. Installed-app signer match, upgrade behavior, live BLE AI1 parity and hardware validation remain unverified.
+- Pi backup race-test PR #78: commit `404136ee9fe2361791f1d0004e840092495abc8f`; [smoke 44071411873](https://github.com/cruefan94/Flipper-AI-Integration-Testing/actions/runs/44071411873) and [descriptor regression 44071411641](https://github.com/cruefan94/Flipper-AI-Integration-Testing/actions/runs/44071411641) both **completed successfully**. This is Pi test evidence, not a unified release candidate.
+- Firmware AI1 review PR #42: commit `89688d3af084424db70b8c55468afbfde07d9bff`; **no PR-triggered Actions run returned** for this exact commit. Do not interpret no run as a pass.
+
+## Strict release-evidence requirements
+1. **Android**: pin exact integrated source SHA, passing build run and APK artifact hash; compare actual package name, versionCode and signing certificate to the currently installed app before an upgrade. An incompatible signer must block upgrade; side-by-side installation is only opt-in with owner approval. Never uninstall or overwrite the owner's app to resolve a signer mismatch.
+2. **Native F7**: pin private source SHA in a private-only ledger, passing exact-source native build, genuine generated `firmware.dfu` header/element framing and suffix CRC verification, native `.tgz` SHA-256, encrypted-only delivery identity, and reproducible recovery/backup guide. A SHA-256 for the encrypted outer ZIP does **not** prove inner updater integrity. Prior real DFU header mismatch [44023046497](https://github.com/cruefan94/Flipper-AI-Integration-Testing/actions/runs/44023046497) remains a hold. Never retry the known failed CRC 9-99 updater.
+3. **BLE AI1**: pin protocol/spec revision and both firmware/Android SHAs; test HELLO/ASK/reply semantics, consent/revocation, disconnect/reconnect, stale reply suppression, CCCD authorization and contention handling. Source tests cannot substitute for a real Flipper-to-phone handshake.
+4. **Optional Pi/ESP32/radio**: keep out of bundled deliverables until exact dependency, hardware safety and compatibility gates are satisfied.
+5. **CI failover**: count two consecutive **completed** failures only on the same workflow and branch, or repeated failure before provisioning. Classify code vs runner failure from job evidence; do not assume billing. Dispatch the approved public-safe private-firmware fallback only with authorized permissions. If private Actions:read or dispatch permissions return 403/missing, record **BLOCKED**, never claim a fallback run, and never transfer private source or binary to public.
+6. **Promotion**: integration-testing owns the combined release ledger; do not concurrently mutate a shared candidate branch, merge protected main, flash devices, install APKs, or deploy production.
+
+## Next controlled handoff
+The integration owner should attach exact artifact manifests and signer/DFU verification output through approved private-safe routes, then run the unified evidence gate against a candidate manifest. Until then, both deliverables remain **HOLD**. This handoff itself changes documentation only and is not a candidate promotion.
