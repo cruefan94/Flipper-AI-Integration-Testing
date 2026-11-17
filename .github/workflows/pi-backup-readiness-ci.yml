@@ -40,7 +40,7 @@ jobs:
           loader = unittest.TestLoader()
           suite = unittest.TestSuite()
           for pattern in patterns:
-              suite.addTests(loader.discover(str(root), pattern=pattern, top_level_dir='.'))
+              suite.addTests(loader.discover(str(root), pattern=pattern, top_level_dir=str(root)))
           count = suite.countTestCases()
           print(f'Discovered {count} tests across {len(files)} Pi backup/readiness files')
           if count < 4:
