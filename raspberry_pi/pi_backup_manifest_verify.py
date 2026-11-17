@@ -35,6 +35,28 @@ def _safe_path(root: Path, name: object) -> Path | None:
     return current
 
 
+
+def _open_confined(root: Path, name: str) -> int:
+    """Open a regular file via directory descriptors, never following symlinks.
+
+    Each intermediate directory is pinned before its child is opened, so a
+    concurrent rename/symlink swap cannot redirect reads outside backup_root.
+    Caller owns the returned descriptor; all intermediate descriptors close.
+    """
+    parts = name.split("/")
+    flags_dir = os.O_RDONLY | os.O_CLOEXEC | os.O_NOFOLLOW | os.O_DIRECTORY
+    current = os.open(root, flags_dir)
+    try:
+        for component in parts[:-1]:
+            child = os.open(component, flags_dir, dir_fd=current)
+            os.close(current)
+            current = child
+        flags_file = os.O_RDONLY | os.O_CLOEXEC | os.O_NOFOLLOW | os.O_NONBLOCK
+        return os.open(parts[-1], flags_file, dir_fd=current)
+    finally:
+        os.close(current)
+
+
 def verify_manifest(backup_root: Path, manifest: dict) -> dict:
     """Validate listed files without opening any serial device or changing data."""
     root = Path(backup_root)
@@ -69,8 +91,7 @@ def verify_manifest(backup_root: Path, manifest: dict) -> dict:
             # Recheck the opened descriptor: a path can change after lstat().
             # O_NOFOLLOW prevents a final-component symlink swap; O_NONBLOCK
             # avoids hanging on a substituted FIFO. Never open for writing.
-            flags = os.O_RDONLY | os.O_CLOEXEC | os.O_NOFOLLOW | os.O_NONBLOCK
-            fd = os.open(path, flags)
+            fd = _open_confined(root, name)
             with os.fdopen(fd, "rb") as stream:
                 if not stat.S_ISREG(os.fstat(stream.fileno()).st_mode):
                     results.append({"status": "not_regular_file"})
