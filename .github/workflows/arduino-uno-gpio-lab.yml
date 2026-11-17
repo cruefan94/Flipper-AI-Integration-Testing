@@ -1,0 +1,31 @@
+name: Arduino Uno GPIO offline safety regression
+on:
+  push:
+    branches:
+      - lab/arduino-uno-gpio-ci-20261117-1421
+    paths:
+      - 'lab/arduino_uno_gpio_review.py'
+      - 'tests/test_arduino_uno_gpio_review.py'
+      - '.github/workflows/arduino-uno-gpio-lab.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-gpio-contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile exact checked-out sources
+        run: python -m py_compile lab/arduino_uno_gpio_review.py tests/test_arduino_uno_gpio_review.py
+      - name: Run offline synthetic GPIO safety tests
+        run: python -m unittest discover -s tests -p 'test_arduino_uno_gpio_review.py' -v
+      - name: Declare test boundary
+        run: echo 'Synthetic fixtures only. No physical board, flashing, credentials, radio, or private firmware.'
