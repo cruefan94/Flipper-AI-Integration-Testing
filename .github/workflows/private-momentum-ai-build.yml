@@ -30,6 +30,10 @@ on:
   push:
     paths:
       - '.github/workflows/private-momentum-ai-build.yml'
+      - '.github/workflows/ci-fallback-verify.yml'
+      - 'scripts/prepare_momentum_flash_package.py'
+      - 'tests/test_momentum_flash_package.py'
+      - 'tests/test_ai1_fallback_exact_sha.py'
 permissions:
   contents: read
 env:
