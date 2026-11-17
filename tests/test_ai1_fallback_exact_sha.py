@@ -12,7 +12,7 @@ ROUTER=(ROOT/".github/workflows/ci-fallback-verify.yml").read_text()
 
 class ExactShaFirmwareFallbackTests(unittest.TestCase):
     def test_private_source_is_exactly_pinned_not_old_branch(self):
-        self.assertIn("4edfac791f9f297c8fae5e5f9cda136ff457e463",BUILD)
+        self.assertIn("1c51c08f384d5538f60580600c7c42bf1680ca1e",BUILD)
         self.assertIn("feature/momentum-ai1-next-flash-20261117",BUILD)
         self.assertNotIn("feature/flash-test-platform-v01",BUILD)
         self.assertIn("actual=\"$(git -C \"$RUNNER_TEMP/private-ai\" rev-parse HEAD)\"",BUILD)
