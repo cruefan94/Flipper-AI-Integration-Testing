@@ -2,6 +2,7 @@
 from __future__ import annotations
 import argparse
 import json
+import math
 from pathlib import Path
 import time
 
@@ -35,7 +36,11 @@ def snapshot(root: Path = Path("/")) -> dict:
     proc = root / "proc"
     uptime = read_text(proc / "uptime")
     try:
-        seconds = int(float(uptime.split()[0])) if uptime else None
+        seconds = None
+        if uptime:
+            raw_seconds = float(uptime.split()[0])
+            if math.isfinite(raw_seconds) and raw_seconds >= 0:
+                seconds = int(raw_seconds)
     except (ValueError, IndexError):
         seconds = None
     pressure = read_text(proc / "pressure/memory")
@@ -45,7 +50,9 @@ def snapshot(root: Path = Path("/")) -> dict:
             for part in line.split():
                 if part.startswith("avg10="):
                     try:
-                        pressure_avg10 = float(part.split("=", 1)[1])
+                        candidate = float(part.split("=", 1)[1])
+                        if math.isfinite(candidate) and 0 <= candidate <= 100:
+                            pressure_avg10 = candidate
                     except ValueError:
                         pass
     return {
