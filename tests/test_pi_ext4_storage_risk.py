@@ -19,6 +19,17 @@ class StorageRiskTests(unittest.TestCase):
         self.assertEqual(result["severity"], "REVIEW")
         self.assertIs(result["throttling_flag_nonzero"], False)
 
+    def test_nonzero_throttling_requires_review(self):
+        result = classify("throttled=0x50000")
+        self.assertEqual(result["severity"], "REVIEW")
+        self.assertIs(result["throttling_flag_nonzero"], True)
+        self.assertIn("not proof of current undervoltage", result["guidance"])
+
+    def test_zero_throttling_does_not_raise_alarm(self):
+        result = classify("throttled=0x0")
+        self.assertEqual(result["severity"], "NO_MATCH")
+        self.assertIs(result["throttling_flag_nonzero"], False)
+
     def test_io_without_ext4(self):
         self.assertEqual(classify("Buffer I/O error on dev sda").get("severity"), "CRITICAL_STORAGE_RISK")
 
