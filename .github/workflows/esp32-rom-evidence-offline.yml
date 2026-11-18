@@ -1,0 +1,19 @@
+name: ESP32 ROM evidence offline regression
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'lab/esp32/rom_evidence_gate.py'
+      - '.github/workflows/esp32-rom-evidence-offline.yml'
+permissions:
+  contents: read
+jobs:
+  offline-rom-evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile Python syntax
+        run: python3 -m py_compile lab/esp32/rom_evidence_gate.py
+      - name: Execute 11 offline synthetic tests
+        run: python3 lab/esp32/rom_evidence_gate.py --self-test
