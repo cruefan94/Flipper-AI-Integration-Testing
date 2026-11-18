@@ -1,0 +1,25 @@
+name: Pi EXT4 offline regression
+on:
+  push:
+    branches:
+      - fix/pi-ext4-negated-io-20261118
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile offline analyzer and tests
+        run: python -m py_compile raspberry_pi/ext4_storage_risk.py tests/test_pi_ext4_storage_risk.py
+      - name: Run isolated storage classifier regression suite
+        run: python -m unittest discover -s tests -p test_pi_ext4_storage_risk.py -v
