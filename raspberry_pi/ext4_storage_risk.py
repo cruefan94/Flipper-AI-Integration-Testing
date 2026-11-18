@@ -32,7 +32,7 @@ def classify(data):
             throttled = int(t.group(1), 16)
     critical = bool(io_count or (ext4_count and directory_count))
     return {
-        "severity": "CRITICAL_STORAGE_RISK" if critical else ("REVIEW" if ext4_count or usb_count else "NO_MATCH"),
+        "severity": "CRITICAL_STORAGE_RISK" if critical else ("REVIEW" if ext4_count or usb_count or (throttled is not None and throttled != 0) else "NO_MATCH"),
         "ext4_warning_lines": ext4_count,
         "io_error_lines": io_count,
         "directory_error_lines": directory_count,
@@ -42,7 +42,7 @@ def classify(data):
         "guidance": ("Stop disk-intensive tasks; prioritize independent backup/recovery; "
                      "do not fsck a mounted root filesystem or assume a drive is failing. "
                      "Inspect cable, power, storage and filesystem from a safe recovery environment."
-                     if critical else "No definitive storage diagnosis from these lines; inspect full private logs."),
+                     if critical else "No definitive storage diagnosis from these lines; nonzero throttling flags require power/thermal review, not proof of current undervoltage; inspect full private logs."),
         "limitations": "Pattern matches are clues, not proof of physical drive failure; no device operations performed."
     }
 
