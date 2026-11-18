@@ -125,5 +125,23 @@ class FailoverPolicyTest(unittest.TestCase):
         self.assertFalse(module.recorded(key + "5", [{"display_title": "fallback | " + key}]))
 
 
+    def test_coverage_summary_flags_unmonitored_private_repo(self):
+        summary = module.coverage_summary({
+            FW: "BLOCKED: Actions history permission or API error",
+            ANDROID: "ACCESSIBLE",
+        }, 0, 0)
+        self.assertIn("Private fallback NOT fully operational", summary)
+        self.assertIn("BLOCKED: Actions history", summary)
+        self.assertIn("Fallbacks dispatched: **0**", summary)
+        self.assertNotIn("fake-token", summary)
+
+    def test_coverage_summary_distinguishes_access_from_dispatch(self):
+        summary = module.coverage_summary({
+            FW: "ACCESSIBLE", ANDROID: "ACCESSIBLE",
+        }, 0, 0)
+        self.assertIn("Monitored Actions histories accessible", summary)
+        self.assertIn("does not prove a fallback was triggered", summary)
+
+
 if __name__ == "__main__":
     unittest.main()
