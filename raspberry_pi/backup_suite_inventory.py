@@ -1,9 +1,10 @@
 """Read-only, public-safe Pi backup suite inventory gate.
 
-This checks test *presence*, not passing execution. No hardware, backups, network,
-secrets or privileged operations are accessed.
+Presence is not execution. No hardware, backups, network, secrets, or
+privileged operations are accessed. Symlinks never satisfy the gate.
 """
 from pathlib import Path
+import stat
 import sys
 
 REQUIRED_SUITES = {
@@ -14,8 +15,21 @@ REQUIRED_SUITES = {
 
 
 def inspect_suite_presence(root: Path) -> dict[str, bool]:
-    """Return fixed labels only; never expose filesystem paths."""
-    return {label: (root / filename).is_file()
+    """Return fixed labels only, rejecting symlink roots and suite files."""
+    try:
+        root_ok = stat.S_ISDIR(root.lstat().st_mode)
+    except OSError:
+        root_ok = False
+
+    def regular_file(filename: str) -> bool:
+        if not root_ok:
+            return False
+        try:
+            return stat.S_ISREG((root / filename).lstat().st_mode)
+        except OSError:
+            return False
+
+    return {label: regular_file(filename)
             for label, filename in REQUIRED_SUITES.items()}
 
 
@@ -25,7 +39,7 @@ def main() -> int:
     for label, present in inventory.items():
         print(f"{label}: {'PRESENT' if present else 'MISSING'}")
     if not all(inventory.values()):
-        print("BLOCKED: required suite files absent; no candidate promotion")
+        print("BLOCKED: required suite files absent or unsafe; no candidate promotion")
         return 1
     print("PRESENCE ONLY: execution, counts and CI remain unverified")
     return 0

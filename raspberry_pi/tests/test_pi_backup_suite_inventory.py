@@ -26,10 +26,37 @@ class BackupSuiteInventoryTests(unittest.TestCase):
             root = Path(directory)
             (root / REQUIRED_SUITES["privacy_contract"]).touch()
             result = inspect_suite_presence(root)
-        self.assertEqual(result["privacy_contract"], True)
+        self.assertTrue(result["privacy_contract"])
         self.assertFalse(result["manifest_verifier"])
         self.assertFalse(result["readiness_contract"])
         self.assertNotIn(str(root), repr(result))
+
+    def test_symlinked_suite_file_is_not_accepted(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            target = root / "target.py"
+            target.touch()
+            for label, filename in REQUIRED_SUITES.items():
+                (root / filename).symlink_to(target)
+                self.assertFalse(inspect_suite_presence(root)[label])
+                (root / filename).unlink()
+
+    def test_symlinked_root_is_not_accepted(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            actual = root / "actual"
+            actual.mkdir()
+            for filename in REQUIRED_SUITES.values():
+                (actual / filename).touch()
+            link = root / "linked"
+            link.symlink_to(actual, target_is_directory=True)
+            self.assertFalse(any(inspect_suite_presence(link).values()))
+
+    def test_directory_named_like_suite_is_not_accepted(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / REQUIRED_SUITES["manifest_verifier"]).mkdir()
+            self.assertFalse(inspect_suite_presence(root)["manifest_verifier"])
 
 
 if __name__ == "__main__":
