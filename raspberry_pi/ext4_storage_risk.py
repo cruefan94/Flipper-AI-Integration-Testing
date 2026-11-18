@@ -9,6 +9,7 @@ import re
 import sys
 
 EXT4 = re.compile(r"EXT4-fs (?:warning|error) \(device ([a-zA-Z0-9_-]+)\)", re.I)
+EXT4_ERROR = re.compile(r"EXT4-fs error \\(device [a-zA-Z0-9_-]+\\)", re.I)
 IO = re.compile(r"(?:error -5|I/O error|Buffer I/O error|blk_update_request|critical medium error)", re.I)
 METADATA = re.compile(r"(?:metadata checksum (?:invalid|failed|error|mismatch)|checksum (?:invalid|failed|error|mismatch)|EXT4-fs error.*(?:error -117|corrupt(?:ed|ion)? (?:inode|directory|extent|metadata)))", re.I)
 DIRECTORY = re.compile(r"(?:dx_probe|htree_dirblock_to_tree|reading directory block)", re.I)
@@ -21,13 +22,14 @@ MAX_BYTES = 1024 * 1024
 
 def classify(data):
     devices = set()
-    ext4_count = io_count = directory_count = usb_count = readonly_count = metadata_count = 0
+    ext4_count = io_count = directory_count = usb_count = readonly_count = metadata_count = ext4_error_count = 0
     throttled = None  # Bitwise union of all observed flags; never discard earlier warnings.
     for line in data.splitlines():
         m = EXT4.search(line)
         if m:
             ext4_count += 1
             devices.add(m.group(1))
+        ext4_error_count += bool(EXT4_ERROR.search(line))
         io_count += bool(IO.search(NEGATED_IO.sub("", line)))
         directory_count += bool(DIRECTORY.search(line))
         metadata_count += bool(METADATA.search(line))
@@ -38,10 +40,11 @@ def classify(data):
         for t in THROTTLE.finditer(line):
             flag = int(t.group(1), 16)
             throttled = flag if throttled is None else (throttled | flag)
-    critical = bool(io_count or readonly_count or metadata_count or (ext4_count and directory_count))
+    critical = bool(ext4_error_count or io_count or readonly_count or metadata_count or (ext4_count and directory_count))
     return {
         "severity": "CRITICAL_STORAGE_RISK" if critical else ("REVIEW" if ext4_count or usb_count or (throttled is not None and throttled != 0) else "NO_MATCH"),
         "ext4_warning_lines": ext4_count,
+        "ext4_explicit_error_lines": ext4_error_count,
         "io_error_lines": io_count,
         "directory_error_lines": directory_count,
         "metadata_corruption_lines": metadata_count,
