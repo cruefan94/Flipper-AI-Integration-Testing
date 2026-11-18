@@ -1,0 +1,18 @@
+name: Public-safe paired release evidence regression
+on:
+  pull_request:
+    paths:
+      - 'tools/paired_release_evidence_gate.py'
+      - 'tests/test_paired_release_evidence_gate.py'
+      - '.github/workflows/paired-release-evidence-regression.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline-evidence-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run public-safe evidence gate unit tests
+        run: python3 -m unittest discover -s tests -p test_paired_release_evidence_gate.py -v
