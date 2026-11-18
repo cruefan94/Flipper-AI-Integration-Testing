@@ -56,7 +56,7 @@ class StorageRiskTests(unittest.TestCase):
                 self.assertEqual(result["io_error_lines"], 0)
 
     def test_real_io_error_remains_critical_after_clean_status(self):
-        result = classify("no I/O errors\\nBuffer I/O error on dev sda")
+        result = classify("no I/O errors\nBuffer I/O error on dev sda")
         self.assertEqual(result["severity"], "CRITICAL_STORAGE_RISK")
         self.assertEqual(result["io_error_lines"], 1)
 
