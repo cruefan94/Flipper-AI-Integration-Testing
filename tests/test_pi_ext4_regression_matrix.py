@@ -50,8 +50,8 @@ class PiStorageRiskMatrix(unittest.TestCase):
 
     def test_multiple_devices_are_deduplicated_and_sorted(self):
         result = module.classify(
-            "EXT4-fs warning (device sdb1): check\\n"
-            "EXT4-fs error (device sda2): lookup\\n"
+            "EXT4-fs warning (device sdb1): check\n"
+            "EXT4-fs error (device sda2): lookup\n"
             "EXT4-fs warning (device sdb1): check"
         )
         self.assertEqual(result["devices"], ["sda2", "sdb1"])
@@ -59,7 +59,7 @@ class PiStorageRiskMatrix(unittest.TestCase):
         self.assertEqual(result["severity"], "CRITICAL_STORAGE_RISK")
 
     def test_zero_throttle_snapshot_does_not_override_prior_warning(self):
-        result = module.classify("throttled=0x50000\\nthrottled=0x0")
+        result = module.classify("throttled=0x50000\nthrottled=0x0")
         self.assertTrue(result["throttling_flag_nonzero"])
         self.assertEqual(result["severity"], "REVIEW")
 
