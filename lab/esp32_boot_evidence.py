@@ -19,7 +19,7 @@ def inspect(record):
     if not isinstance(steps, list):
         return issues + ["steps must be a list"]
     expected = [
-        ("hold_boot", 0, 1),
+        ("hold_boot", 1, 0),
         ("assert_en", 0, 0),
         ("release_en", 1, 0),
         ("release_boot", 1, 1),
@@ -39,7 +39,7 @@ class Tests(unittest.TestCase):
     def setUp(self):
         self.good = {"chip":"esp32-wroom","transport":"usb-serial","authorization":True,
                      "steps":[{"action":a,"en":e,"boot":b} for a,e,b in [
-                         ("hold_boot",0,1),("assert_en",0,0),
+                         ("hold_boot",1,0),("assert_en",0,0),
                          ("release_en",1,0),("release_boot",1,1)]],
                      "rom_download_mode_observed":True}
     def test_valid(self): self.assertEqual(inspect(self.good), [])
