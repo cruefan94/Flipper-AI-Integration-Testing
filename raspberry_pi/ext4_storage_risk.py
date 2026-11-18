@@ -18,7 +18,7 @@ MAX_BYTES = 1024 * 1024
 def classify(data):
     devices = set()
     ext4_count = io_count = directory_count = usb_count = 0
-    throttled = None
+    throttled = None  # Bitwise union of all observed flags; never discard earlier warnings.
     for line in data.splitlines():
         m = EXT4.search(line)
         if m:
@@ -29,7 +29,8 @@ def classify(data):
         usb_count += bool(DISCONNECT.search(line))
         t = THROTTLE.search(line)
         if t:
-            throttled = int(t.group(1), 16)
+            flag = int(t.group(1), 16)
+            throttled = flag if throttled is None else (throttled | flag)
     critical = bool(io_count or (ext4_count and directory_count))
     return {
         "severity": "CRITICAL_STORAGE_RISK" if critical else ("REVIEW" if ext4_count or usb_count or (throttled is not None and throttled != 0) else "NO_MATCH"),
