@@ -2,12 +2,16 @@
 import json
 import re
 import subprocess
+import tempfile
 
 CHECKS = {
     'power': ['vcgencmd', 'get_throttled'],
     'memory': ['free', '-h'],
     'storage': ['df', '-h', '/'],
     'previous_boot_warnings': ['journalctl', '-b', '-1', '-p', 'warning', '--no-pager', '-n', '40'],
+    'current_boot_warnings': ['journalctl', '-b', '0', '-p', 'warning', '--no-pager', '-n', '40'],
+    'current_kernel_usb': ['journalctl', '-b', '0', '-k', '--no-pager', '-n', '100'],
+    'previous_kernel_usb': ['journalctl', '-b', '-1', '-k', '--no-pager', '-n', '100'],
     'usb_devices': ['lsusb'],
 }
 PATTERNS = {
@@ -18,7 +22,19 @@ PATTERNS = {
     'storage_error': r'mmc.*(error|timeout)|i/o error',
 }
 
-def collect(runner=subprocess.run):
+def bounded_run(argv, **kwargs):
+    """Spool bounded journal command output to disk, not an unbounded RAM pipe."""
+    with tempfile.TemporaryFile() as out, tempfile.TemporaryFile() as err:
+        p = subprocess.run(argv, stdout=out, stderr=err,
+                           timeout=kwargs.get('timeout', 8), check=False)
+        out.seek(max(0, out.tell() - 6000))
+        err.seek(max(0, err.tell() - 400))
+        return subprocess.CompletedProcess(argv, p.returncode,
+            out.read().decode('utf-8', errors='replace'),
+            err.read().decode('utf-8', errors='replace'))
+
+def collect(runner=None):
+    runner = runner or bounded_run
     result = {}
     for name, argv in CHECKS.items():
         try:
