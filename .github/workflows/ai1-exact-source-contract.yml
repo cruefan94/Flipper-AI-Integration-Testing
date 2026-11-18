@@ -1,0 +1,33 @@
+name: AI1 exact-source fallback contract (public, source-only)
+on:
+  push:
+    paths:
+      - '.github/workflows/ai1-exact-source-contract.yml'
+      - '.github/workflows/private-momentum-ai-build.yml'
+      - '.github/workflows/ci-fallback-verify.yml'
+      - 'tests/test_ai1_fallback_exact_sha.py'
+  pull_request:
+    paths:
+      - '.github/workflows/ai1-exact-source-contract.yml'
+      - '.github/workflows/private-momentum-ai-build.yml'
+      - '.github/workflows/ci-fallback-verify.yml'
+      - 'tests/test_ai1_fallback_exact_sha.py'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  public-safe-source-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Compile source-only tests
+        run: python3 -m py_compile tests/test_ai1_fallback_exact_sha.py
+      - name: Verify exact-SHA private fallback contract without private credentials
+        run: python3 -m unittest discover -s tests -p 'test_ai1_fallback_exact_sha.py' -v
+      - name: Clarify independent result
+        run: |
+          echo 'Public runner verified workflow source assertions only.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'No private firmware download, compilation, artifact, or flash occurred in this job.' >> "$GITHUB_STEP_SUMMARY"

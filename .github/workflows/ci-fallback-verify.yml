@@ -73,6 +73,9 @@ jobs:
     if: inputs.kind == 'firmware'
     needs: describe
     uses: ./.github/workflows/private-momentum-ai-build.yml
+    with:
+      source_sha: ${{ inputs.source_sha }}
+      source_branch: ${{ inputs.source_branch }}
     secrets: inherit
 
   protocol:
