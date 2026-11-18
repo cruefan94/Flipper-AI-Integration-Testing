@@ -14,6 +14,7 @@ DIRECTORY = re.compile(r"(?:dx_probe|htree_dirblock_to_tree|reading directory bl
 DISCONNECT = re.compile(r"(?:usb .*disconnect|uas_eh_abort_handler|reset (?:SuperSpeed|high-speed) USB device)", re.I)
 THROTTLE = re.compile(r"throttled=0x([0-9a-f]+)", re.I)
 NEGATED_IO = re.compile(r"\b(?:no|zero|0)\s+(?:buffer\s+)?I/O\s+errors?\b", re.I)
+NEGATED_REMOUNT = re.compile(r"\b(?:not|never|no)\s+(?:remounting|remounted)\s+filesystem\s+read-only\b", re.I)
 READ_ONLY = re.compile(r"(?:EXT4-fs.*(?:remounting filesystem read-only|remounted filesystem read-only)|Remounting filesystem read-only)", re.I)
 MAX_BYTES = 1024 * 1024
 
@@ -29,7 +30,7 @@ def classify(data):
         io_count += bool(IO.search(NEGATED_IO.sub("", line)))
         directory_count += bool(DIRECTORY.search(line))
         usb_count += bool(DISCONNECT.search(line))
-        readonly_count += bool(READ_ONLY.search(line))
+        readonly_count += bool(READ_ONLY.search(NEGATED_REMOUNT.sub("", line)))
         # A pasted diagnostic line may contain multiple sampled values.
         # Aggregate every sample so a later clear reading cannot erase history.
         for t in THROTTLE.finditer(line):
