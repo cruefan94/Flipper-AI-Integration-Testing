@@ -1,0 +1,26 @@
+name: Pi EXT4 offline regression matrix
+
+on:
+  pull_request:
+    paths:
+      - 'raspberry_pi/ext4_storage_risk.py'
+      - 'tests/test_pi_ext4_regression_matrix.py'
+      - '.github/workflows/pi-ext4-regression-matrix.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pi-ext4-offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Run eight offline Pi storage regression tests
+        run: python -m unittest discover -s tests -p 'test_pi_ext4_regression_matrix.py' -v
