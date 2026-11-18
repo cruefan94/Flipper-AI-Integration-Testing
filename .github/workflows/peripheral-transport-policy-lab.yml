@@ -1,0 +1,24 @@
+name: Peripheral transport policy offline tests
+on:
+  push:
+    branches:
+      - 'lab/peripheral-transport-ci-20261118-1727'
+  pull_request:
+    paths:
+      - 'lab/peripheral_transport_policy_20261118.py'
+      - '.github/workflows/peripheral-transport-policy-lab.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline-policy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Compile offline policy
+        run: python3 -m py_compile lab/peripheral_transport_policy_20261118.py
+      - name: Run 10 offline policy regression methods
+        run: python3 -m unittest -v lab/peripheral_transport_policy_20261118.py
