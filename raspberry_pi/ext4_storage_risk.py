@@ -28,8 +28,9 @@ def classify(data):
         io_count += bool(IO.search(NEGATED_IO.sub("", line)))
         directory_count += bool(DIRECTORY.search(line))
         usb_count += bool(DISCONNECT.search(line))
-        t = THROTTLE.search(line)
-        if t:
+        # A pasted diagnostic line may contain multiple sampled values.
+        # Aggregate every sample so a later clear reading cannot erase history.
+        for t in THROTTLE.finditer(line):
             flag = int(t.group(1), 16)
             throttled = flag if throttled is None else (throttled | flag)
     critical = bool(io_count or (ext4_count and directory_count))
