@@ -33,5 +33,20 @@ class StorageRiskTests(unittest.TestCase):
     def test_io_without_ext4(self):
         self.assertEqual(classify("Buffer I/O error on dev sda").get("severity"), "CRITICAL_STORAGE_RISK")
 
+    def test_earlier_throttle_not_erased_by_later_clean_snapshot(self):
+        result = classify("throttled=0x50000\nthrottled=0x0")
+        self.assertEqual(result["severity"], "REVIEW")
+        self.assertIs(result["throttling_flag_nonzero"], True)
+
+    def test_zero_then_nonzero_throttle_requires_review(self):
+        result = classify("throttled=0x0\nthrottled=0x1")
+        self.assertEqual(result["severity"], "REVIEW")
+        self.assertIs(result["throttling_flag_nonzero"], True)
+
+    def test_multiple_zero_throttle_snapshots_stay_clear(self):
+        result = classify("throttled=0x0\nthrottled=0x0")
+        self.assertEqual(result["severity"], "NO_MATCH")
+        self.assertIs(result["throttling_flag_nonzero"], False)
+
 if __name__ == "__main__":
     unittest.main()
