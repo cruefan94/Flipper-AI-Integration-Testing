@@ -29,5 +29,18 @@ class TriageTests(unittest.TestCase):
         self.assertTrue(signals['out_of_memory'])
         self.assertTrue(signals['desktop_failure'])
 
+    def test_current_kernel_events_are_collected(self):
+        self.assertIn('current_kernel_usb', triage.CHECKS)
+        self.assertIn('previous_kernel_usb', triage.CHECKS)
+        def fake(argv, **kwargs):
+            message = 'usb 1-1: USB disconnect' if argv == triage.CHECKS['current_kernel_usb'] else ''
+            return Mock(returncode=0, stdout=message, stderr='')
+        self.assertTrue(triage.analyze(triage.collect(fake))['usb_reset'])
+
+    def test_large_output_truncated(self):
+        p = triage.bounded_run(['python3', '-c', 'print("x" * 100000)'], timeout=8)
+        self.assertEqual(p.returncode, 0)
+        self.assertLessEqual(len(p.stdout), 6000)
+
 if __name__ == '__main__':
     unittest.main()
