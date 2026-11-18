@@ -81,8 +81,8 @@ class OfflineTests(unittest.TestCase):
 
 def main():
     if len(sys.argv) == 2 and sys.argv[1] == '--self-test':
-        unittest.main(argv=[sys.argv[0]], exit=False)
-        return
+        result = unittest.main(argv=[sys.argv[0]], exit=False).result
+        raise SystemExit(0 if result.wasSuccessful() else 1)
     if len(sys.argv) != 2:
         raise SystemExit('usage: python pi_usb_identity_stability.py observations.json | --self-test')
     try:
