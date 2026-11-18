@@ -25,7 +25,7 @@ def classify(data):
         if m:
             ext4_count += 1
             devices.add(m.group(1))
-        io_count += bool(IO.search(line)) and not bool(NEGATED_IO.search(line))
+        io_count += bool(IO.search(NEGATED_IO.sub("", line)))
         directory_count += bool(DIRECTORY.search(line))
         usb_count += bool(DISCONNECT.search(line))
         t = THROTTLE.search(line)
