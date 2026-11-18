@@ -5,7 +5,7 @@ on:
       source_sha:
         type: string
         required: false
-        default: '1c51c08f384d5538f60580600c7c42bf1680ca1e'
+        default: '8201647c822896a4dbc8fe00547f94aabb633de9'
       source_branch:
         type: string
         required: false
@@ -21,7 +21,7 @@ on:
         description: 'Exact private firmware source commit (40 hex chars)'
         required: false
         type: string
-        default: '1c51c08f384d5538f60580600c7c42bf1680ca1e'
+        default: '8201647c822896a4dbc8fe00547f94aabb633de9'
       source_branch:
         description: 'Private source branch to audit (no firmware published)'
         required: false
@@ -37,7 +37,7 @@ on:
 permissions:
   contents: read
 env:
-  EXPECTED_PRIVATE_SHA: ${{ inputs.source_sha || '1c51c08f384d5538f60580600c7c42bf1680ca1e' }}
+  EXPECTED_PRIVATE_SHA: ${{ inputs.source_sha || '8201647c822896a4dbc8fe00547f94aabb633de9' }}
   EXPECTED_PRIVATE_BRANCH: ${{ inputs.source_branch || 'feature/momentum-ai1-next-flash-20261117' }}
 jobs:
   custom-firmware:
