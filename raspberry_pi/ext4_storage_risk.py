@@ -13,6 +13,7 @@ IO = re.compile(r"(?:error -5|I/O error|Buffer I/O error|blk_update_request|crit
 DIRECTORY = re.compile(r"(?:dx_probe|htree_dirblock_to_tree|reading directory block)", re.I)
 DISCONNECT = re.compile(r"(?:usb .*disconnect|uas_eh_abort_handler|reset (?:SuperSpeed|high-speed) USB device)", re.I)
 THROTTLE = re.compile(r"throttled=0x([0-9a-f]+)", re.I)
+NEGATED_IO = re.compile(r"\b(?:no|zero|0)\s+(?:buffer\s+)?I/O\s+errors?\b", re.I)
 MAX_BYTES = 1024 * 1024
 
 def classify(data):
@@ -24,7 +25,7 @@ def classify(data):
         if m:
             ext4_count += 1
             devices.add(m.group(1))
-        io_count += bool(IO.search(line))
+        io_count += bool(IO.search(line)) and not bool(NEGATED_IO.search(line))
         directory_count += bool(DIRECTORY.search(line))
         usb_count += bool(DISCONNECT.search(line))
         t = THROTTLE.search(line)

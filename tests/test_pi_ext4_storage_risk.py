@@ -48,5 +48,17 @@ class StorageRiskTests(unittest.TestCase):
         self.assertEqual(result["severity"], "NO_MATCH")
         self.assertIs(result["throttling_flag_nonzero"], False)
 
+    def test_negated_io_status_not_critical(self):
+        for line in ("no I/O errors", "0 I/O errors", "zero buffer I/O errors"):
+            with self.subTest(line=line):
+                result = classify(line)
+                self.assertEqual(result["severity"], "NO_MATCH")
+                self.assertEqual(result["io_error_lines"], 0)
+
+    def test_real_io_error_remains_critical_after_clean_status(self):
+        result = classify("no I/O errors\nBuffer I/O error on dev sda")
+        self.assertEqual(result["severity"], "CRITICAL_STORAGE_RISK")
+        self.assertEqual(result["io_error_lines"], 1)
+
 if __name__ == "__main__":
     unittest.main()
