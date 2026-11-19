@@ -1,0 +1,37 @@
+name: Pi qFlipper exact read-only inventory tests
+on:
+  push:
+    branches:
+      - test/pi-qflipper-exact-suite-20261119
+  pull_request:
+    branches:
+      - feature/pi-qflipper-readonly-usb-inventory-20261119
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  qflipper-inventory:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile source and run exactly three synthetic inventory tests
+        run: |
+          python -m py_compile raspberry_pi/qflipper_readonly_usb_inventory.py tests/test_pi_qflipper_readonly_usb_inventory.py
+          python - <<'PY'
+          import unittest
+          suite = unittest.defaultTestLoader.discover('tests', pattern='test_pi_qflipper_readonly_usb_inventory.py', top_level_dir='.')
+          count = suite.countTestCases()
+          if count != 3:
+              raise SystemExit(f'Expected exactly 3 qFlipper tests, discovered {count}')
+          result = unittest.TextTestRunner(verbosity=2).run(suite)
+          if not result.wasSuccessful() or result.skipped:
+              raise SystemExit('qFlipper suite failed or skipped tests')
+          PY
