@@ -8,8 +8,8 @@ import json
 import re
 import sys
 
-EXT4 = re.compile(r"EXT4-fs (?:warning|error) \(device ([a-zA-Z0-9_-]+)\)", re.I)
-EXT4_ERROR = re.compile(r"EXT4-fs error \(device [a-zA-Z0-9_-]+\)", re.I)
+EXT4 = re.compile(r"EXT4-fs (?:(?:warning|error) \(device ([a-zA-Z0-9_-]+)\)|\(([a-zA-Z0-9_-]+)\):\s*(?:warning|error)\b)", re.I)
+EXT4_ERROR = re.compile(r"EXT4-fs (?:error \(device [a-zA-Z0-9_-]+\)|\([a-zA-Z0-9_-]+\):\s*error\b)", re.I)
 IO = re.compile(r"(?:error -5|I/O error|Buffer I/O error|blk_update_request|critical medium error)", re.I)
 METADATA = re.compile(r"(?:metadata checksum (?:invalid|failed|error|mismatch)|checksum (?:invalid|failed|error|mismatch)|EXT4-fs error.*(?:error -117|corrupt(?:ed|ion)? (?:inode|directory|extent|metadata)))", re.I)
 DIRECTORY = re.compile(r"(?:dx_probe|htree_dirblock_to_tree|reading directory block)", re.I)
