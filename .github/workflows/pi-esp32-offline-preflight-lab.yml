@@ -1,0 +1,18 @@
+name: Pi ESP32 offline preflight lab
+on:
+  push:
+    branches:
+      - 'lab/pi-esp32-preflight-ci-*'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline-preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile offline validator
+        run: python3 -m py_compile lab/pi_esp32_port_preflight.py
+      - name: Run 11 offline safety tests
+        run: python3 lab/pi_esp32_port_preflight.py --self-test
