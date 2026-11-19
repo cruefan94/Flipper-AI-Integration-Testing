@@ -1,0 +1,36 @@
+name: Pi qFlipper backup evidence exact tests
+on:
+  push:
+    branches:
+      - test/pi-backup-evidence-exact-20261119
+  pull_request:
+    paths:
+      - 'raspberry_pi/qflipper_backup_evidence.py'
+      - 'tests/test_pi_qflipper_backup_evidence.py'
+      - '.github/workflows/pi-qflipper-backup-evidence-exact.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  exact-backup-evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Run exact offline suite with count and skip gates
+        run: |
+          python - <<'PY'
+          import unittest
+          loader = unittest.TestLoader()
+          suite = loader.discover(start_dir="tests", pattern="test_pi_qflipper_backup_evidence.py")
+          count = suite.countTestCases()
+          assert count == 3, f"Expected 3 backup evidence tests, discovered {count}"
+          result = unittest.TextTestRunner(verbosity=2).run(suite)
+          assert result.wasSuccessful(), "Backup evidence suite failed"
+          assert len(result.skipped) == 0, "Skipped tests prohibited"
+          PY
