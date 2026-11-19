@@ -107,6 +107,11 @@ def validate(data: dict) -> dict:
     files = data.get("sha256")
     require(isinstance(files, dict) and all(valid_digest(x) for x in files.values()),
             "Per-file SHA256 report absent or malformed")
+    require(any(str(x).startswith("asset_packs/") for x in files)
+            and any(str(x).startswith("infrared/OmniCore_IRDB/") for x in files),
+            "Required asset packs and IR paths not in SD evidence")
+    require(not any(str(x).endswith((".dfu", ".tgz", ".fuf")) for x in files),
+            "Updater firmware accidentally included in SD resources")
     require(data.get("sd_file_count") == len(files)
             and data.get("sd_uncompressed_bytes", 0) > 100_000
             and all(not str(x).startswith("flipper_ai/") for x in files)
