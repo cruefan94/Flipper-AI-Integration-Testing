@@ -1,0 +1,22 @@
+name: Android APK upgrade evidence gate (public-safe)
+on:
+  pull_request:
+    paths:
+      - 'tests/test_android_upgrade_evidence_gate.py'
+      - '.github/workflows/android-upgrade-evidence-gate.yml'
+  push:
+    branches:
+      - 'test/android-upgrade-evidence-gate-*'
+    paths:
+      - 'tests/test_android_upgrade_evidence_gate.py'
+      - '.github/workflows/android-upgrade-evidence-gate.yml'
+permissions:
+  contents: read
+jobs:
+  offline-evidence-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate public-safe upgrade evidence policy
+        run: python3 -m unittest discover -s tests -p test_android_upgrade_evidence_gate.py -v
