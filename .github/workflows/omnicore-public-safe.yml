@@ -5,6 +5,8 @@ on:
     paths:
       - "tests/omnicore_public_safe_gate.py"
       - "tests/test_omnicore_public_safe_gate.py"
+      - "tests/omnicore_sd_only_gate.py"
+      - "tests/test_omnicore_sd_only_gate.py"
       - ".github/workflows/omnicore-public-safe.yml"
   push:
     branches:
@@ -13,6 +15,8 @@ on:
     paths:
       - "tests/omnicore_public_safe_gate.py"
       - "tests/test_omnicore_public_safe_gate.py"
+      - "tests/omnicore_sd_only_gate.py"
+      - "tests/test_omnicore_sd_only_gate.py"
       - ".github/workflows/omnicore-public-safe.yml"
   workflow_dispatch:
 
@@ -32,8 +36,8 @@ jobs:
       - name: Check Python syntax, run synthetic fail-closed tests
         run: |
           set -euo pipefail
-          python3 -m py_compile tests/omnicore_public_safe_gate.py tests/test_omnicore_public_safe_gate.py
-          python3 -m unittest discover -s tests -p 'test_omnicore_public_safe_gate.py' -v
+          python3 -m py_compile tests/omnicore_public_safe_gate.py tests/test_omnicore_public_safe_gate.py tests/omnicore_sd_only_gate.py tests/test_omnicore_sd_only_gate.py
+          python3 -m unittest discover -s tests -p 'test_omnicore*_gate.py' -v
       - name: Confirm strictly public-safe scope
         run: |
           test ! -d private_source
