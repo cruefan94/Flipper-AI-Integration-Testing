@@ -1,0 +1,52 @@
+name: Pi dashboard exact regression suite (read-only)
+on:
+  push:
+    branches:
+      - test/pi-dashboard-exact-suite-ci-20261119
+  pull_request:
+    branches:
+      - test/pi-dashboard-refresh-contract-20261119
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dashboard-contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Require Tkinter (never silently skip GUI contract tests)
+        run: python -c "import tkinter; print('Tkinter import available; no window opened')"
+      - name: Parse exact Pi monitor, dashboard, and launcher sources
+        run: |
+          python -B raspberry_pi/launch_pironman_dashboard.py --check
+          python -B -m py_compile raspberry_pi/pironman_readonly_dashboard.py pi/monitor/pi_readonly_monitor.py
+      - name: Run exact dashboard and launcher tests with zero skips
+        run: |
+          python -B - <<'PY'
+          import unittest
+          from pathlib import Path
+          files = [
+              'tests/test_pi_dashboard_refresh_contract.py',
+              'tests/test_pi_dashboard_monitor_contract.py',
+              'tests/test_pi_dashboard_launcher.py',
+          ]
+          loader = unittest.TestLoader()
+          suite = unittest.TestSuite()
+          for file in files:
+              if not Path(file).is_file():
+                  raise SystemExit(f'Missing required test file: {file}')
+              suite.addTests(loader.discover('tests', pattern=Path(file).name, top_level_dir='.'))
+          result = unittest.TextTestRunner(verbosity=2).run(suite)
+          if result.testsRun < 11 or result.skipped or not result.wasSuccessful():
+              raise SystemExit(f'Contract gate failed: run={result.testsRun} skipped={len(result.skipped)}')
+          PY
+      - name: Evidence boundary
+        run: echo "Host synthetic contract checks only; not Pi hardware, cooling, USB, APK or F7 validation."
