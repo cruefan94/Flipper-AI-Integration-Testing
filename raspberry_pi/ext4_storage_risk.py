@@ -28,7 +28,7 @@ def classify(data):
         m = EXT4.search(line)
         if m:
             ext4_count += 1
-            devices.add(m.group(1))
+            devices.add(m.group(1) or m.group(2))
         ext4_error_count += bool(EXT4_ERROR.search(line))
         io_count += bool(IO.search(NEGATED_IO.sub("", line)))
         directory_count += bool(DIRECTORY.search(line))
