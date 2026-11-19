@@ -63,6 +63,23 @@ class PiStorageRiskMatrix(unittest.TestCase):
         self.assertTrue(result["throttling_flag_nonzero"])
         self.assertEqual(result["severity"], "REVIEW")
 
+    def test_kernel_prefix_ext4_error_is_critical(self):
+        result = module.classify("EXT4-fs (sda2): error: ext4_find_entry failed")
+        self.assertEqual(result["severity"], "CRITICAL_STORAGE_RISK")
+        self.assertEqual(result["ext4_explicit_error_lines"], 1)
+        self.assertEqual(result["devices"], ["sda2"])
+
+    def test_kernel_prefix_ext4_warning_requires_review(self):
+        result = module.classify("EXT4-fs (sdb1): warning: journal issue")
+        self.assertEqual(result["severity"], "REVIEW")
+        self.assertEqual(result["devices"], ["sdb1"])
+        self.assertEqual(result["ext4_warning_lines"], 1)
+
+    def test_kernel_prefix_unrelated_text_does_not_match(self):
+        result = module.classify("EXT4-fs (sda2): mounted filesystem")
+        self.assertEqual(result["severity"], "NO_MATCH")
+        self.assertEqual(result["devices"], [])
+
     def test_empty_input_is_not_diagnosis(self):
         result = module.classify("")
         self.assertEqual(result["severity"], "NO_MATCH")
