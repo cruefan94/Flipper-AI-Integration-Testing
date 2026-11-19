@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - test/pi-qflipper-exact-suite-20261119
+      - fix/pi-qflipper-ci-discovery-20261119
   pull_request:
     branches:
       - feature/pi-qflipper-readonly-usb-inventory-20261119
@@ -27,7 +28,7 @@ jobs:
           python -m py_compile raspberry_pi/qflipper_readonly_usb_inventory.py tests/test_pi_qflipper_readonly_usb_inventory.py
           python - <<'PY'
           import unittest
-          suite = unittest.defaultTestLoader.discover('tests', pattern='test_pi_qflipper_readonly_usb_inventory.py', top_level_dir='.')
+          suite = unittest.defaultTestLoader.discover('tests', pattern='test_pi_qflipper_readonly_usb_inventory.py', top_level_dir='tests')
           count = suite.countTestCases()
           if count != 3:
               raise SystemExit(f'Expected exactly 3 qFlipper tests, discovered {count}')
