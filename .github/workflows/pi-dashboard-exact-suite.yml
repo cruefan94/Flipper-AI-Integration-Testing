@@ -3,9 +3,11 @@ on:
   push:
     branches:
       - test/pi-dashboard-exact-suite-ci-20261119
+      - fix/pi-dashboard-exact-ci-trigger-20261119
   pull_request:
     branches:
       - test/pi-dashboard-refresh-contract-20261119
+      - docs/pi-dashboard-device-acceptance-20261119
   workflow_dispatch:
 
 permissions:
