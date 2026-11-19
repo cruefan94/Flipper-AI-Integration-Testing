@@ -1,0 +1,35 @@
+name: Pi qFlipper recovery preflight exact tests
+
+on:
+  push:
+    branches:
+      - test/pi-qflipper-recovery-preflight-exact-20261119
+  pull_request:
+    paths:
+      - 'raspberry_pi/qflipper_recovery_readiness.py'
+      - 'tests/test_pi_qflipper_recovery_readiness.py'
+      - '.github/workflows/pi-qflipper-recovery-exact.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  recovery-preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Execute exact offline synthetic tests
+        run: |
+          python - <<'PY'
+          import unittest
+          from tests.test_pi_qflipper_recovery_readiness import RecoveryReadinessTests
+          suite = unittest.defaultTestLoader.loadTestsFromTestCase(RecoveryReadinessTests)
+          assert suite.countTestCases() == 3, f"Expected 3 tests, found {suite.countTestCases()}"
+          result = unittest.TextTestRunner(verbosity=2).run(suite)
+          assert result.testsRun == 3 and not result.skipped and result.wasSuccessful(), "Recovery preflight regression gate failed"
+          PY
