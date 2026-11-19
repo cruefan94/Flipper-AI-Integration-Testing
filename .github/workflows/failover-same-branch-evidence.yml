@@ -1,0 +1,22 @@
+name: Same-branch two-failure evidence regression (public-safe)
+on:
+  push:
+    branches:
+      - test/failover-evidence-same-branch-20261119-0203
+  pull_request:
+    paths:
+      - 'tests/test_failover_same_branch_evidence.py'
+      - '.github/workflows/failover-same-branch-evidence.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline-policy-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Execute exact offline evidence tests
+        run: python3 -m unittest discover -s tests -p 'test_failover_same_branch_evidence.py' -v
