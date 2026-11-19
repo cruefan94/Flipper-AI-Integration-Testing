@@ -27,6 +27,6 @@ jobs:
       - name: Compile launcher audit and report
         run: python -m py_compile raspberry_pi/desktop_launcher_audit.py raspberry_pi/desktop_launcher_report.py
       - name: Run synthetic desktop launcher regressions
-        run: python -m unittest discover -s tests -p 'test_desktop_launcher*.py' -v
+        run: python -m unittest discover -s tests -p 'test_pi_desktop_launcher*.py' -v
       - name: Safety boundary
         run: echo "Synthetic tests only; no Raspberry Pi, fan, OLED, GPIO, firmware, or package changes."
