@@ -1,0 +1,28 @@
+name: Arduino Uno offline sensor contract regression
+on:
+  push:
+    branches:
+      - lab/arduino-uno-contract-ci-20261118-2024
+    paths:
+      - 'lab/arduino_uno_sensor_contract/**'
+      - '.github/workflows/arduino-uno-offline-contract.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  synthetic-uno-contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Compile offline validator and test
+        run: python3 -m py_compile lab/arduino_uno_sensor_contract/arduino_sensor_contract.py lab/arduino_uno_sensor_contract/test_arduino_sensor_contract.py
+      - name: Run eleven synthetic cases (no hardware)
+        working-directory: lab/arduino_uno_sensor_contract
+        run: python3 -m unittest -v test_arduino_sensor_contract.py
+      - name: State verification boundary
+        run: echo "Synthetic input-only Uno pin contract; no GPIO, USB, firmware, credentials or devices accessed."
