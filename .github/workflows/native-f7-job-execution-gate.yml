@@ -1,0 +1,22 @@
+name: Public-safe native F7 job execution gate tests
+on:
+  pull_request:
+    paths:
+      - 'tests/test_native_f7_job_execution_gate.py'
+      - '.github/workflows/native-f7-job-execution-gate.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline-job-execution-regressions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Syntax check
+        run: python -m py_compile tests/test_native_f7_job_execution_gate.py
+      - name: Nine offline fail-closed regressions
+        run: python tests/test_native_f7_job_execution_gate.py
