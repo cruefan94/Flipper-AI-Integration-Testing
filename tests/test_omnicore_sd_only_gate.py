@@ -107,6 +107,18 @@ class OmniCoreSdOnlyTests(unittest.TestCase):
             v["sd_file_count"] += 1
         self.reject(bad)
 
+    def test_missing_real_asset_path(self):
+        def bad(v):
+            v["sha256"].pop("asset_packs/Demo/Anims/manifest.txt")
+            v["sd_file_count"] -= 1
+        self.reject(bad)
+
+    def test_disallow_accidental_firmware_updater(self):
+        def bad(v):
+            v["sha256"]["firmware.dfu"] = A
+            v["sd_file_count"] += 1
+        self.reject(bad)
+
     def test_empty_sd_manifest(self):
         self.reject(lambda v: v.update(sha256={}))
 
