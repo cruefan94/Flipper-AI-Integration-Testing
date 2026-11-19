@@ -43,7 +43,7 @@ jobs:
           for file in files:
               if not Path(file).is_file():
                   raise SystemExit(f'Missing required test file: {file}')
-              suite.addTests(loader.discover('tests', pattern=Path(file).name, top_level_dir='.'))
+              suite.addTests(loader.discover('tests', pattern=Path(file).name, top_level_dir='tests'))
           result = unittest.TextTestRunner(verbosity=2).run(suite)
           if result.testsRun < 11 or result.skipped or not result.wasSuccessful():
               raise SystemExit(f'Contract gate failed: run={result.testsRun} skipped={len(result.skipped)}')
