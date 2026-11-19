@@ -36,7 +36,7 @@ jobs:
           files = [
               'tests/test_pi_dashboard_refresh_contract.py',
               'tests/test_pi_dashboard_monitor_contract.py',
-              'tests/test_pi_dashboard_launcher.py',
+              'tests/test_pironman_dashboard_launcher.py',
           ]
           loader = unittest.TestLoader()
           suite = unittest.TestSuite()
