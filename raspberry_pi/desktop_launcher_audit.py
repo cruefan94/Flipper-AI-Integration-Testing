@@ -27,6 +27,17 @@ def audit_file(path, which=shutil.which):
             return {"file": path.name, "name": name, "status": "not_application"}
         if entry.get("Hidden", "false").lower() == "true":
             return {"file": path.name, "name": name, "status": "hidden"}
+        # XDG TryExec controls whether a launcher should be shown by the desktop.
+        # Check it without running anything, before checking the main Exec command.
+        try_exec = entry.get("TryExec", "").strip()
+        if try_exec:
+            if SHELL_META.search(try_exec) or any(ch.isspace() for ch in try_exec):
+                return {"file": path.name, "name": name, "status": "review_tryexec"}
+            try_path = Path(try_exec)
+            found = (try_path.is_file() and os.access(try_path, os.X_OK)
+                     if "/" in try_exec else which(try_exec) is not None)
+            if not found:
+                return {"file": path.name, "name": name, "status": "missing_tryexec"}
         if not command:
             return {"file": path.name, "name": name, "status": "missing_exec"}
         # Avoid shell parsing/execution: only inspect first executable token.
