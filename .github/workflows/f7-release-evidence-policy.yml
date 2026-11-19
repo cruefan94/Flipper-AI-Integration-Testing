@@ -1,0 +1,20 @@
+name: F7 paired release evidence policy (offline)
+on:
+  pull_request:
+    paths:
+      - 'tools/f7_release_evidence_gate.py'
+      - 'tests/test_f7_release_evidence_gate.py'
+      - '.github/workflows/f7-release-evidence-policy.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  policy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Test fail-closed evidence policy using synthetic values only
+        run: python -m unittest discover -s tests -p 'test_f7_release_evidence_gate.py' -v
