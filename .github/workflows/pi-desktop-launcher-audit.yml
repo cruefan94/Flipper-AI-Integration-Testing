@@ -6,7 +6,7 @@ on:
   pull_request:
     paths:
       - 'raspberry_pi/desktop_launcher_*.py'
-      - 'tests/test_desktop_launcher*.py'
+      - 'tests/test_pi_desktop_launcher*.py'
       - '.github/workflows/pi-desktop-launcher-audit.yml'
   workflow_dispatch:
 
