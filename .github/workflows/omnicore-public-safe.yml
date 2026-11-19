@@ -1,0 +1,42 @@
+name: OmniCore public-safe synthetic post-compile evidence tests
+
+on:
+  pull_request:
+    paths:
+      - "tests/omnicore_public_safe_gate.py"
+      - "tests/test_omnicore_public_safe_gate.py"
+      - ".github/workflows/omnicore-public-safe.yml"
+  push:
+    branches:
+      - "ci/omnicore-public-safe-postcompile-gate-20261118"
+      - main
+    paths:
+      - "tests/omnicore_public_safe_gate.py"
+      - "tests/test_omnicore_public_safe_gate.py"
+      - ".github/workflows/omnicore-public-safe.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  public-safe-synthetic:
+    name: Synthetic-only release evidence matrix (NO private sources or binaries)
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout public test source only
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Check Python syntax, run synthetic fail-closed tests
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tests/omnicore_public_safe_gate.py tests/test_omnicore_public_safe_gate.py
+          python3 -m unittest discover -s tests -p 'test_omnicore_public_safe_gate.py' -v
+      - name: Confirm strictly public-safe scope
+        run: |
+          test ! -d private_source
+          test ! -d momentum
+          test ! -d candidate
+          echo 'Synthetic public-safe contract passed; NO F7 firmware or Flipper hardware certified'
