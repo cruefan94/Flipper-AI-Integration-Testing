@@ -35,6 +35,15 @@ class LauncherAuditTests(unittest.TestCase):
     def test_non_application(self):
         self.assertEqual(audit_file(self.entry("Type=Link\nExec=/bin/sh\n"))["status"], "not_application")
 
+    def test_tryexec_missing(self):
+        self.assertEqual(audit_file(self.entry("TryExec=definitely_not_a_real_pi_command_xyz\nExec=/bin/sh\n"))["status"], "missing_tryexec")
+
+    def test_tryexec_existing(self):
+        self.assertEqual(audit_file(self.entry("TryExec=/bin/sh\nExec=/bin/sh\n"))["status"], "executable_found")
+
+    def test_tryexec_wrapper_needs_review(self):
+        self.assertEqual(audit_file(self.entry("TryExec=env FOO=bar\nExec=/bin/sh\n"))["status"], "review_tryexec")
+
     def test_scan(self):
         self.entry("Exec=/bin/sh\n")
         self.assertEqual(len(scan([self.root])), 1)
