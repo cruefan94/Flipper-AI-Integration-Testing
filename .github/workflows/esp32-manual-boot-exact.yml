@@ -1,0 +1,43 @@
+name: ESP32 manual boot offline exact suite
+on:
+  pull_request:
+    paths:
+      - 'lab/esp32_manual_boot_preflight/**'
+      - '.github/workflows/esp32-manual-boot-exact.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-exact:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile and execute exactly ten synthetic tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile lab/esp32_manual_boot_preflight/boot_preflight.py lab/esp32_manual_boot_preflight/test_boot_preflight.py
+          python - <<'PY'
+          import importlib.util
+          import pathlib
+          import sys
+          import unittest
+
+          root = pathlib.Path("lab/esp32_manual_boot_preflight").resolve()
+          sys.path.insert(0, str(root))
+          spec = importlib.util.spec_from_file_location("test_boot_preflight", root / "test_boot_preflight.py")
+          module = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(module)
+          suite = unittest.defaultTestLoader.loadTestsFromModule(module)
+          assert suite.countTestCases() == 10, f"Expected 10 tests, found {suite.countTestCases()}"
+          result = unittest.TextTestRunner(verbosity=2).run(suite)
+          assert result.testsRun == 10 and result.wasSuccessful() and not result.skipped, "Offline exact suite failed"
+          PY
