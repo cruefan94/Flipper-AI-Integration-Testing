@@ -90,7 +90,7 @@ class OmniCoreSdOnlyTests(unittest.TestCase):
         self.reject(lambda v: v["esp32_firmware"]["boards"][0].update(firmware_offset="0x30000"))
 
     def test_mismatched_esp_bin_hash(self):
-        self.reject(lambda v: v["esp32_firmware"]["boards"][0]["bins_sha256"].update(firmware.bin=A))
+        self.reject(lambda v: v["esp32_firmware"]["boards"][0]["bins_sha256"].update({"firmware.bin": A}))
 
     def test_wrong_esp_release_tag(self):
         self.reject(lambda v: v["esp32_firmware"].update(release="rolling"))
