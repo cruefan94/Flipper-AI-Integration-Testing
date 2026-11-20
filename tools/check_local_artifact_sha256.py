@@ -12,7 +12,7 @@ import pathlib
 import re
 import sys
 
-HEX64 = re.compile(r"[0-9a-fA-F]{64}\\Z")
+HEX64 = re.compile(r"[0-9a-fA-F]{64}\Z")
 
 def verify(path: pathlib.Path, expected: str) -> bool:
     if not HEX64.fullmatch(expected):
