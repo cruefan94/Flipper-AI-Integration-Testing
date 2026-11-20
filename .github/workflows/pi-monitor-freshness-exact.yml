@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - test/pi-monitor-freshness-exact-20261119
+      - fix/pi-monitor-exact-import-20261119
   pull_request:
     branches:
       - feature/pi-monitor-staleness-20261119
@@ -26,14 +27,23 @@ jobs:
         run: |
           python -m py_compile raspberry_pi/pi_monitor_freshness.py tests/test_pi_monitor_freshness.py
           python - <<'PY'
+          import importlib.util
+          import pathlib
           import unittest
-          suite = unittest.defaultTestLoader.discover('tests', pattern='test_pi_monitor_freshness.py', top_level_dir='.')
+
+          path = pathlib.Path("tests/test_pi_monitor_freshness.py")
+          spec = importlib.util.spec_from_file_location("pi_monitor_freshness_tests", path)
+          if spec is None or spec.loader is None:
+              raise SystemExit("Monitor test module cannot be loaded")
+          module = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(module)
+          suite = unittest.defaultTestLoader.loadTestsFromModule(module)
           count = suite.countTestCases()
           if count != 4:
-              raise SystemExit(f'Expected exactly 4 monitor tests; found {count}')
+              raise SystemExit(f"Expected exactly 4 monitor tests; found {count}")
           result = unittest.TextTestRunner(verbosity=2).run(suite)
           if not result.wasSuccessful() or result.skipped:
-              raise SystemExit('Monitor freshness tests failed or skipped')
+              raise SystemExit("Monitor freshness tests failed or skipped")
           PY
       - name: Scope boundary
         run: echo "Offline synthetic status classifier only; no hardware, secrets, device polling, or cooling controls."
