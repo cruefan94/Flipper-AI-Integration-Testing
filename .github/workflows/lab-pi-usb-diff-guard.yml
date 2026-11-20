@@ -1,0 +1,20 @@
+name: Lab Pi USB inventory diff guard
+on:
+  push:
+    branches: [lab/pi-usb-diff-guard-20261120-1821]
+  pull_request:
+    paths:
+      - 'lab/pi_usb_inventory_diff_guard.py'
+      - '.github/workflows/lab-pi-usb-diff-guard.yml'
+permissions:
+  contents: read
+jobs:
+  offline-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Syntax check
+        run: python3 -m py_compile lab/pi_usb_inventory_diff_guard.py
+      - name: Ten offline regression tests
+        run: python3 lab/pi_usb_inventory_diff_guard.py -v
