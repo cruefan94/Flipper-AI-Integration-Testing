@@ -1,0 +1,20 @@
+name: Two-failure evidence offline regression
+on:
+  pull_request:
+    paths:
+      - 'tools/check_two_failure_evidence.py'
+      - 'tests/test_two_failure_evidence.py'
+      - '.github/workflows/two-failure-evidence-offline.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  synthetic:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Run isolated fail-closed regression
+        run: python -m unittest discover -s tests -p test_two_failure_evidence.py -v
