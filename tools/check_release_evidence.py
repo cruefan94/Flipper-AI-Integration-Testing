@@ -15,6 +15,7 @@ REQUIRED = ("source_sha", "ci_run_url", "artifact_sha256", "contract_version",
             "native_build_passed", "real_artifact_verified", "hardware_verified")
 SHA40 = re.compile(r"^[a-fA-F0-9]{40}$")
 RUN = re.compile(r"^https://github\.com/[^/]+/[^/]+/actions/runs/[0-9]+$")
+AI1_VERSION = re.compile(r"^AI1-v[1-9][0-9]*$")
 
 def valid(entry):
     if not isinstance(entry, dict) or any(k not in entry for k in REQUIRED):
@@ -25,7 +26,7 @@ def valid(entry):
         return False
     if not isinstance(entry["ci_run_url"], str) or not RUN.fullmatch(entry["ci_run_url"]):
         return False
-    if not isinstance(entry["contract_version"], str) or not entry["contract_version"].strip():
+    if not isinstance(entry["contract_version"], str) or not AI1_VERSION.fullmatch(entry["contract_version"]):
         return False
     return all(entry[k] is True for k in ("native_build_passed", "real_artifact_verified", "hardware_verified"))
 
@@ -35,7 +36,8 @@ def check(data):
         return False
     if data["ai1_paired_passed"] is not True:
         return False
-    return valid(data["android"]) and valid(data["f7"])
+    return (valid(data["android"]) and valid(data["f7"]) and
+            data["android"]["contract_version"] == data["f7"]["contract_version"])
 
 def self_test():
     e = dict(source_sha="a"*40, ci_run_url="https://github.com/x/y/actions/runs/123",
@@ -51,6 +53,9 @@ def self_test():
         bad = json.loads(json.dumps(good))
         bad["f7"][field] = False
         assert not check(bad), field
+    bad = json.loads(json.dumps(good))
+    bad["f7"]["contract_version"] = "AI1-v2"
+    assert not check(bad), "AI1 contract version mismatch"
     bad = json.loads(json.dumps(good))
     bad["ai1_paired_passed"] = False
     assert not check(bad)
