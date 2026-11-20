@@ -1,0 +1,25 @@
+name: Backpack USB topology offline regression
+on:
+  push:
+    branches:
+      - lab/backpack-usb-backfeed-topology-20261120-1125
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline-topology:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Run synthetic USB power isolation tests
+        run: |
+          python -m py_compile scripts/backpack_usb_topology.py tests/test_backpack_usb_topology.py
+          python -m unittest discover -s tests -p 'test_backpack_usb_topology.py' -v
+      - name: State safety boundary
+        run: echo "Offline fixtures only. No physical devices, private firmware, secrets, flashing or release promotion."
