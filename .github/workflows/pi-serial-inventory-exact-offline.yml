@@ -1,0 +1,25 @@
+name: Pi serial inventory exact offline tests
+on:
+  push:
+    branches:
+      - lab/pi-serial-inventory-exact-ci-20261119-2123
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile isolated offline checker and tests
+        run: python -m py_compile lab/pi_serial_inventory.py lab/test_pi_serial_inventory.py
+      - name: Run exact nine synthetic tests
+        run: |
+          cd lab
+          python -m unittest -v test_pi_serial_inventory
