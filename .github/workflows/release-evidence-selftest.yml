@@ -1,0 +1,42 @@
+name: Release evidence offline self-test
+
+on:
+  pull_request:
+    paths:
+      - 'tools/check_release_evidence.py'
+      - '.github/workflows/release-evidence-selftest.yml'
+  push:
+    branches:
+      - 'test/release-evidence-ci-*'
+    paths:
+      - 'tools/check_release_evidence.py'
+      - '.github/workflows/release-evidence-selftest.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-release-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Synthetic release-evidence regressions (no secrets or artifacts)
+        run: python3 tools/check_release_evidence.py --self-test
+      - name: Verify missing manifest fails closed
+        shell: bash
+        run: |
+          if python3 tools/check_release_evidence.py; then
+            echo 'ERROR: missing manifest was accepted'
+            exit 1
+          fi
+      - name: Verify malformed local fixture fails closed
+        shell: bash
+        run: |
+          printf '%s\n' '{"android":{},"f7":{},"ai1_paired_passed":true}' > /tmp/release-invalid.json
+          if python3 tools/check_release_evidence.py /tmp/release-invalid.json; then
+            echo 'ERROR: incomplete evidence was accepted'
+            exit 1
+          fi
+          rm -f /tmp/release-invalid.json
