@@ -1,0 +1,22 @@
+name: Android upgrade evidence offline self-test
+on:
+  push:
+    branches:
+      - 'test/android-upgrade-evidence-gate-*'
+    paths:
+      - 'tools/check_android_upgrade_evidence.py'
+      - '.github/workflows/android-upgrade-evidence-selftest.yml'
+  pull_request:
+    paths:
+      - 'tools/check_android_upgrade_evidence.py'
+      - '.github/workflows/android-upgrade-evidence-selftest.yml'
+permissions:
+  contents: read
+jobs:
+  synthetic-upgrade-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Offline fail-closed synthetic self-test (no device data)
+        run: python3 tools/check_android_upgrade_evidence.py --self-test
