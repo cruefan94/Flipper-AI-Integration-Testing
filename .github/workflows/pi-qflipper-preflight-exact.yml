@@ -1,0 +1,27 @@
+name: Pi qFlipper preflight exact regression
+on:
+  push:
+    branches:
+      - 'test/pi-qflipper-preflight-exact-*'
+  pull_request:
+    paths:
+      - 'raspberry_pi/qflipper_preflight.py'
+      - 'tests/test_pi_qflipper_preflight.py'
+      - '.github/workflows/pi-qflipper-preflight-exact.yml'
+permissions:
+  contents: read
+jobs:
+  qflipper-offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Check syntax without executing hardware code
+        run: python -m py_compile raspberry_pi/qflipper_preflight.py tests/test_pi_qflipper_preflight.py
+      - name: Run exactly six synthetic consent and safety tests
+        env:
+          PYTHONPATH: .
+        run: python -m unittest tests.test_pi_qflipper_preflight -v
