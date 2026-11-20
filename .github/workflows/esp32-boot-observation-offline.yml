@@ -1,0 +1,19 @@
+name: ESP32 BOOT EN offline diagnostics tests
+on:
+  pull_request:
+    paths:
+      - 'lab/esp32_boot_observation_gate.py'
+      - '.github/workflows/esp32-boot-observation-offline.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Run isolated synthetic tests (no hardware)
+        run: python3 lab/esp32_boot_observation_gate.py --self-test
