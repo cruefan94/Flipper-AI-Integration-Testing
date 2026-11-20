@@ -1,0 +1,21 @@
+name: Lab Arduino ESP32 offline voltage gate
+on:
+  push:
+    branches:
+      - lab/arduino-esp32-voltage-gate-20261120-0528
+  pull_request:
+    paths:
+      - 'lab/arduino_esp32_voltage_gate.py'
+      - '.github/workflows/lab-arduino-esp32-voltage.yml'
+permissions:
+  contents: read
+jobs:
+  offline-synthetic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile offline checker
+        run: python3 -m py_compile lab/arduino_esp32_voltage_gate.py
+      - name: Execute synthetic safety cases
+        run: python3 lab/arduino_esp32_voltage_gate.py --self-test
