@@ -1,0 +1,25 @@
+name: Lab ESP32 offline boot strap safety
+on:
+  push:
+    branches: [lab/esp32-boot-strap-offline-20261120-0324]
+  pull_request:
+    paths:
+      - 'lab/esp32_boot_safety.py'
+      - '.github/workflows/lab-esp32-boot-safety.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline-safety:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Compile and run offline assertions
+        run: |
+          python3 -m py_compile lab/esp32_boot_safety.py
+          python3 lab/esp32_boot_safety.py --self-test
+      - name: Safety boundary
+        run: echo "Offline fixtures only; no private source, radio TX, hardware access or flashing."
