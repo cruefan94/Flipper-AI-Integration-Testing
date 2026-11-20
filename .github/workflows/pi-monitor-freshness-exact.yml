@@ -1,0 +1,39 @@
+name: Pi monitor freshness exact regression
+on:
+  push:
+    branches:
+      - test/pi-monitor-freshness-exact-20261119
+  pull_request:
+    branches:
+      - feature/pi-monitor-staleness-20261119
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  monitor-freshness-tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Run exactly four monitor freshness regression tests
+        run: |
+          python -m py_compile raspberry_pi/pi_monitor_freshness.py tests/test_pi_monitor_freshness.py
+          python - <<'PY'
+          import unittest
+          suite = unittest.defaultTestLoader.discover('tests', pattern='test_pi_monitor_freshness.py', top_level_dir='.')
+          count = suite.countTestCases()
+          if count != 4:
+              raise SystemExit(f'Expected exactly 4 monitor tests; found {count}')
+          result = unittest.TextTestRunner(verbosity=2).run(suite)
+          if not result.wasSuccessful() or result.skipped:
+              raise SystemExit('Monitor freshness tests failed or skipped')
+          PY
+      - name: Scope boundary
+        run: echo "Offline synthetic status classifier only; no hardware, secrets, device polling, or cooling controls."
