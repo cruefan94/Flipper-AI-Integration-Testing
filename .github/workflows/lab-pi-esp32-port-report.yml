@@ -1,0 +1,26 @@
+name: Lab Pi ESP32 offline port report
+on:
+  push:
+    branches:
+      - lab/pi-esp32-readonly-port-report-20261120-0119
+  pull_request:
+    paths:
+      - lab/pi_esp32_offline_port_report.py
+      - .github/workflows/lab-pi-esp32-port-report.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline-selftest:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Compile and execute offline synthetic regression tests
+        run: |
+          python3 -m py_compile lab/pi_esp32_offline_port_report.py
+          python3 lab/pi_esp32_offline_port_report.py --self-test
+      - name: Safety boundary
+        run: echo "No device access, private source, flash command or radio transmission."
