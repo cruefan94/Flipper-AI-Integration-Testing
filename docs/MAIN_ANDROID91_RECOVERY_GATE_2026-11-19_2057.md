@@ -1,0 +1,19 @@
+# MAIN integration evidence — Android PR #91 regression recovery (2026-11-19 20:57 ET)
+
+## Exact references
+- Android PR #90: https://github.com/cruefan94/Flipper-AI-Android-Satellite/pull/90 ; failed exact-head workflow https://github.com/cruefan94/Flipper-AI-Android-Satellite/actions/runs/44648762154 (one completed failure on its branch).
+- Android PR #91: https://github.com/cruefan94/Flipper-AI-Android-Satellite/pull/91 ; head `fc7f6196181b5b4bef26851af98cea70a8d48a80`; source-test assertion updated to account for early null-selection guard before GATT evidence reset.
+- PR #91 exact-head workflow https://github.com/cruefan94/Flipper-AI-Android-Satellite/actions/runs/44656713440 : **completed success**. Its single job passed source/JVM/security regressions, full debug APK build, fail-closed integrity/provenance generation, and APK/report upload. This is **not** a signer-compatible upgrade test or physical BLE acceptance.
+- Previous integration documentation PR #202 head `c42f5ca2d37927ef61c723513e4a54193da646c1` smoke CI https://github.com/cruefan94/Flipper-AI-Integration-Testing/actions/runs/44649975359 completed success; no native firmware was built by that smoke job.
+- Private F7 C2 audit PR #71 head `238a54bfc0b1708a827d489cee5d43197871bfb3`: failed runs https://github.com/cruefan94/Flipper-AI-Momentum-/actions/runs/44568518970 and https://github.com/cruefan94/Flipper-AI-Momentum-/actions/runs/44568544991. Existing public-safe diagnostic fallback https://github.com/cruefan94/Flipper-AI-Integration-Testing/actions/runs/44587016728 passed but **native firmware job was skipped**.
+- Historical encrypted native firmware run https://github.com/cruefan94/Flipper-AI-Integration-Testing/actions/runs/43828499328 completed success at older pinned source. Does not prove present F7 DFU suffix CRC, C2 boundary or current package hashes.
+
+## Release gates — fail closed
+1. **Android**: obtain the actual installed APK signer certificate digest and versionCode privately; compare with candidate signing certificate, application ID, and strictly increasing versionCode before any data-preserving upgrade claim. Do not publish personal device diagnostics, uninstall/replace the owner's app, or install without approval.
+2. **BLE AI1**: require matching exact firmware and Android source SHAs, GATT UUID/characteristic role and API version parity, HELLO/ACK, reconnect, stale callbacks and offline fallback acceptance. Stock Momentum RPC presence is not proof of custom AI1 readiness.
+3. **F7**: independently validate *actual* firmware.dfu suffix CRC, native updater manifest/internal hashes, encrypted-only artifact identity, authoritative C2 image boundary, and qFlipper recovery. Never retry CRC 9-99 artifact.
+4. **Two-failure policy**: count completed failures per workflow **and branch**; after two consecutive failures or repeated pre-job failure, use only approved public-safe private-firmware fallback, with no private source, binary, token, key or log exposed. Distinguish runner provisioning from code failure. If private Actions read or dispatch permissions fail, mark BLOCKED and record failing/fallback run IDs.
+5. **Candidate ledger**: integration-testing workstream exclusively owns shared candidate ledger; do not promote isolated Pi/ESP32/radio/voice tests without exact compatible dependency/CI provenance and physical acceptance. No protected merges, flashing, installations, or production deployment.
+
+## Next handoff
+Android workstream: report signed candidate package ID/versionCode/signing certificate continuity evidence via private route, plus paired AI1 test commits. Firmware workstream: privately diagnose C2 failure and provide exact real-image CRC/hash/flash-layout evidence. Integration-testing: evaluate paired contract tests without altering other workstreams' source branches.
