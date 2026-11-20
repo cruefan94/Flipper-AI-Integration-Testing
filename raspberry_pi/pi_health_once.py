@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 from typing import Callable, Any
 
 from raspberry_pi.pi_proc_collector import collect_pi_health
@@ -35,7 +36,10 @@ def one_shot(*, consent: bool = False,
         for key in ("memory_total_kib", "memory_available_kib",
                     "memory_used_percent", "uptime_seconds"):
             value = sample.get(key)
-            if type(value) in (int, float) and 0 <= value < 1e12:
+            if type(value) not in (int, float) or not math.isfinite(value):
+                continue
+            upper = 100 if key == "memory_used_percent" else 1e12
+            if 0 <= value <= upper:
                 result[key] = value
     return result
 

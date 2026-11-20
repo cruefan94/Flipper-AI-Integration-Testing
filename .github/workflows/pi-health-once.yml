@@ -17,7 +17,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Six exact offline tests and syntax checks
+      - name: Eight exact offline tests and syntax checks
         run: |
           python - <<'PY'
           import ast
@@ -26,7 +26,7 @@ jobs:
           for path in ('raspberry_pi/pi_health_once.py', 'tests/test_pi_health_once.py'):
               ast.parse(pathlib.Path(path).read_text(encoding='utf-8'), filename=path)
           suite = unittest.defaultTestLoader.discover('tests', pattern='test_pi_health_once.py')
-          assert suite.countTestCases() == 6, 'Expected six tests'
+          assert suite.countTestCases() == 8, 'Expected eight tests'
           result = unittest.TextTestRunner(verbosity=2).run(suite)
           assert result.wasSuccessful() and not result.skipped, 'Regression failed or skipped'
           PY
