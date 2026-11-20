@@ -1,0 +1,21 @@
+name: Android signer metadata offline gate
+on:
+  pull_request:
+    paths:
+      - 'tools/check_android_signing_metadata.py'
+      - 'tests/test_android_signing_metadata.py'
+      - '.github/workflows/android-signing-metadata.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline-signing-metadata:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Run synthetic offline tests
+        run: python -m unittest discover -s tests -p test_android_signing_metadata.py -v
