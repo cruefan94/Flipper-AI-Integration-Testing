@@ -1,0 +1,47 @@
+name: Pi proc collector exact offline regression
+on:
+  push:
+    branches:
+      - test/pi-proc-collector-exact-20261120
+  pull_request:
+    paths:
+      - 'raspberry_pi/pi_proc_collector.py'
+      - 'raspberry_pi/pi_health_snapshot.py'
+      - 'tests/test_pi_proc_collector.py'
+      - '.github/workflows/pi-proc-collector-exact.yml'
+permissions:
+  contents: read
+jobs:
+  offline-collector:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Exact five synthetic collector tests, zero skips
+        run: |
+          python - <<'PY'
+          import importlib.util
+          import pathlib
+          import sys
+          import unittest
+          root = pathlib.Path.cwd()
+          sys.path.insert(0, str(root))
+          for name in ('raspberry_pi/pi_proc_collector.py', 'raspberry_pi/pi_health_snapshot.py', 'tests/test_pi_proc_collector.py'):
+              compile((root / name).read_text(encoding='utf-8'), name, 'exec')
+          path = root / 'tests/test_pi_proc_collector.py'
+          spec = importlib.util.spec_from_file_location('pi_proc_collector_tests', path)
+          assert spec is not None and spec.loader is not None
+          module = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(module)
+          suite = unittest.defaultTestLoader.loadTestsFromModule(module)
+          assert suite.countTestCases() == 5, f'Expected exactly five tests, got {suite.countTestCases()}'
+          result = unittest.TextTestRunner(verbosity=2).run(suite)
+          assert result.testsRun == 5 and not result.skipped and result.wasSuccessful(), 'Pi collector regression gate failed'
+          PY
+      - name: Safety boundary
+        run: echo 'Synthetic tests only; no owner Pi, cooling, firmware, private credentials or hardware.'
