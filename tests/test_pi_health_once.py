@@ -43,6 +43,26 @@ class OneShotTests(unittest.TestCase):
                 self.assertEqual(main([]), 0)
         self.assertEqual(json.loads(output.getvalue())["status"], "not_authorized")
 
+    def test_nonfinite_values_are_omitted(self):
+        sample = {"collection_status": "read_only_sample_unverified",
+                  "status": "parsed_unverified", "memory_total_kib": float("nan"),
+                  "memory_available_kib": float("inf"),
+                  "memory_used_percent": float("-inf"), "uptime_seconds": 12}
+        result = one_shot(consent=True, collector=lambda **_: sample)
+        self.assertEqual(result["uptime_seconds"], 12)
+        for key in ("memory_total_kib", "memory_available_kib", "memory_used_percent"):
+            self.assertNotIn(key, result)
+        json.dumps(result, allow_nan=False)
+
+    def test_percentage_bounds_and_bool_rejected(self):
+        sample = {"collection_status": "read_only_sample_unverified",
+                  "status": "parsed_unverified", "memory_used_percent": 101,
+                  "memory_total_kib": True, "memory_available_kib": 2048}
+        result = one_shot(consent=True, collector=lambda **_: sample)
+        self.assertNotIn("memory_used_percent", result)
+        self.assertNotIn("memory_total_kib", result)
+        self.assertEqual(result["memory_available_kib"], 2048)
+
     def test_reject_nonboolean_consent(self):
         with self.assertRaises(ValueError):
             one_shot(consent=1)
