@@ -1,0 +1,21 @@
+name: Pi USB identity delta offline tests
+on:
+  push:
+    branches:
+      - 'lab/pi-usb-identity-diff-offline-*'
+  pull_request:
+    paths:
+      - 'lab/pi_usb_identity_delta_offline_test.py'
+      - '.github/workflows/pi-usb-identity-delta-offline.yml'
+permissions:
+  contents: read
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Run synthetic USB inventory tests
+        run: python3 -m unittest discover -s lab -p 'pi_usb_identity_delta_offline_test.py' -v
