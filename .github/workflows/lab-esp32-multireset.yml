@@ -1,0 +1,18 @@
+name: Lab ESP32 multi-reset offline regression
+on:
+  push:
+    branches:
+      - lab/esp32-boot-sequence-multireset-20261120-2119
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Run 13 public-safe synthetic tests
+        run: cd lab/esp32_boot_sequence && python3 -m unittest -v test_sequence_gate.py

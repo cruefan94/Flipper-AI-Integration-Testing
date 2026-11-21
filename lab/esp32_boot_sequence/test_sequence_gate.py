@@ -6,6 +6,33 @@ class SequenceGateTests(unittest.TestCase):
         self.assertEqual(evaluate("esp32", [Observation("low","low",True),Observation("high","low",True)])["status"], "candidate")
     def test_gpio0_high(self):
         self.assertEqual(evaluate("esp32", [Observation("low","high",True),Observation("high","high",True)])["status"], "not-observed")
+    def test_later_valid_release_after_invalid_release(self):
+        observations = [
+            Observation("low", "high", True),
+            Observation("high", "high", True),
+            Observation("low", "low", True),
+            Observation("high", "low", True),
+        ]
+        self.assertEqual(evaluate("esp32", observations)["status"], "candidate")
+
+    def test_multiple_invalid_releases(self):
+        observations = [
+            Observation("low", "high", True),
+            Observation("high", "high", True),
+            Observation("low", "high", True),
+            Observation("high", "low", True),
+        ]
+        self.assertEqual(evaluate("esp32", observations)["status"], "not-observed")
+
+    def test_later_candidate_is_not_proof(self):
+        observations = [
+            Observation("low", "high", True),
+            Observation("high", "high", True),
+            Observation("low", "low", True),
+            Observation("high", "low", True),
+        ]
+        self.assertIn("ROM log", evaluate("esp32", observations)["reason"])
+
     def test_s2_separate(self):
         self.assertEqual(evaluate("esp32-s2", [Observation("low","low",True),Observation("high","low",True)])["status"], "manual-review")
     def test_unknown_family(self):
