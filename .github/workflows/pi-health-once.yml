@@ -1,0 +1,32 @@
+name: Pi one-shot consent regression
+on:
+  pull_request:
+    paths:
+      - 'raspberry_pi/pi_health_once.py'
+      - 'tests/test_pi_health_once.py'
+      - '.github/workflows/pi-health-once.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  pi-one-shot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Eight exact offline tests and syntax checks
+        run: |
+          python - <<'PY'
+          import ast
+          import pathlib
+          import unittest
+          for path in ('raspberry_pi/pi_health_once.py', 'tests/test_pi_health_once.py'):
+              ast.parse(pathlib.Path(path).read_text(encoding='utf-8'), filename=path)
+          suite = unittest.defaultTestLoader.discover('tests', pattern='test_pi_health_once.py')
+          assert suite.countTestCases() == 8, 'Expected eight tests'
+          result = unittest.TextTestRunner(verbosity=2).run(suite)
+          assert result.wasSuccessful() and not result.skipped, 'Regression failed or skipped'
+          PY

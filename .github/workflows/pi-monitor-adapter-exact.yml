@@ -1,0 +1,49 @@
+name: Pi monitor adapter exact offline regression
+on:
+  push:
+    branches:
+      - test/pi-monitor-adapter-exact-20261120
+  pull_request:
+    paths:
+      - 'raspberry_pi/pi_monitor_adapter.py'
+      - 'raspberry_pi/pi_proc_collector.py'
+      - 'raspberry_pi/pi_monitor_freshness.py'
+      - 'raspberry_pi/pi_health_snapshot.py'
+      - 'tests/test_pi_monitor_adapter.py'
+      - '.github/workflows/pi-monitor-adapter-exact.yml'
+permissions:
+  contents: read
+jobs:
+  offline-adapter:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Six synthetic adapter tests, zero skips
+        run: |
+          python - <<'PY'
+          import importlib.util
+          import pathlib
+          import sys
+          import unittest
+          root = pathlib.Path.cwd()
+          sys.path.insert(0, str(root))
+          for name in ('raspberry_pi/pi_monitor_adapter.py', 'raspberry_pi/pi_proc_collector.py', 'raspberry_pi/pi_monitor_freshness.py', 'raspberry_pi/pi_health_snapshot.py', 'tests/test_pi_monitor_adapter.py'):
+              compile((root / name).read_text(encoding='utf-8'), name, 'exec')
+          path = root / 'tests/test_pi_monitor_adapter.py'
+          spec = importlib.util.spec_from_file_location('pi_monitor_adapter_tests', path)
+          assert spec is not None and spec.loader is not None
+          module = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(module)
+          suite = unittest.defaultTestLoader.loadTestsFromModule(module)
+          assert suite.countTestCases() == 6, f'Expected six tests, got {suite.countTestCases()}'
+          result = unittest.TextTestRunner(verbosity=2).run(suite)
+          assert result.testsRun == 6 and not result.skipped and result.wasSuccessful(), 'Pi adapter regression gate failed'
+          PY
+      - name: Safety boundary
+        run: echo 'Offline synthetic tests only; no Pi hardware, cooling, firmware, secrets or deployment.'

@@ -1,0 +1,35 @@
+name: Pi health snapshot offline tests
+on:
+  push:
+    branches:
+      - feature/pi-readonly-health-parser-20261119
+  workflow_dispatch:
+jobs:
+  pi-health:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Exact five synthetic tests
+        run: |
+          python -m py_compile raspberry_pi/pi_health_snapshot.py tests/test_pi_health_snapshot.py
+          python - <<'PY'
+          import importlib.util
+          import pathlib
+          import unittest
+          spec = importlib.util.spec_from_file_location("pi_health_tests", pathlib.Path("tests/test_pi_health_snapshot.py"))
+          if spec is None or spec.loader is None:
+              raise SystemExit("Cannot load tests")
+          module = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(module)
+          suite = unittest.defaultTestLoader.loadTestsFromModule(module)
+          if suite.countTestCases() != 5:
+              raise SystemExit("Expected exactly five tests")
+          result = unittest.TextTestRunner(verbosity=2).run(suite)
+          if not result.wasSuccessful() or result.skipped:
+              raise SystemExit("Tests failed or skipped")
+          PY

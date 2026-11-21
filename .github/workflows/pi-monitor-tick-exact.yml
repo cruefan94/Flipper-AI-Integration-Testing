@@ -1,0 +1,35 @@
+name: Pi monitor tick exact regression
+on:
+  pull_request:
+    paths:
+      - 'raspberry_pi/pi_monitor_tick.py'
+      - 'tests/test_pi_monitor_tick.py'
+      - '.github/workflows/pi-monitor-tick-exact.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  pi-monitor-tick:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Syntax check and exact eight-test offline gate
+        run: |
+          python - <<'PY'
+          import ast
+          import pathlib
+          import unittest
+          for filename in ('raspberry_pi/pi_monitor_tick.py', 'tests/test_pi_monitor_tick.py'):
+              ast.parse(pathlib.Path(filename).read_text(encoding='utf-8'), filename=filename)
+          suite = unittest.defaultTestLoader.discover('tests', pattern='test_pi_monitor_tick.py')
+          count = suite.countTestCases()
+          if count != 8:
+              raise SystemExit(f'Expected exactly 8 offline tests, found {count}')
+          result = unittest.TextTestRunner(verbosity=2).run(suite)
+          if not result.wasSuccessful() or result.skipped:
+              raise SystemExit('Pi monitor tick regression gate failed or skipped')
+          PY

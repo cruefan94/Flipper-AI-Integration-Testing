@@ -1,0 +1,23 @@
+name: Pi USB inventory offline regression
+on:
+  pull_request:
+    paths:
+      - 'raspberry_pi/usb_vidpid_inventory.py'
+      - 'tests/test_pi_usb_vidpid_inventory.py'
+      - '.github/workflows/pi-usb-inventory-offline.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  synthetic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile Pi USB utility and tests
+        run: python -m py_compile raspberry_pi/usb_vidpid_inventory.py tests/test_pi_usb_vidpid_inventory.py
+      - name: Run five synthetic tests without hardware
+        run: python -m unittest discover -s tests -p 'test_pi_usb_vidpid_inventory.py' -v
