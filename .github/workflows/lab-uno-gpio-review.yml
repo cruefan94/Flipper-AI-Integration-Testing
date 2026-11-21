@@ -1,0 +1,19 @@
+name: Lab Uno GPIO offline safety tests
+on:
+  push:
+    branches:
+      - lab/uno-gpio-static-safety-20261120-2325
+  pull_request:
+    paths:
+      - 'lab/uno_gpio_review.py'
+      - '.github/workflows/lab-uno-gpio-review.yml'
+permissions:
+  contents: read
+jobs:
+  offline-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Nine synthetic tests (no hardware, secrets or firmware)
+        run: python3 lab/uno_gpio_review.py --self-test
