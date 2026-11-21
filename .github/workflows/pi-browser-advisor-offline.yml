@@ -1,0 +1,22 @@
+name: Pi browser advisor targeted offline tests
+on:
+  pull_request:
+    paths:
+      - 'pi_lab/browser_memory_advisor.py'
+      - '.github/workflows/pi-browser-advisor-offline.yml'
+  push:
+    branches:
+      - 'pi/browser-advisor-targeted-ci-20261121-1615'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  browser-advisor-offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Python standard library unit tests (no hardware or secrets)
+        run: python3 -m unittest discover -s pi_lab -p 'browser_memory_advisor.py' -v
