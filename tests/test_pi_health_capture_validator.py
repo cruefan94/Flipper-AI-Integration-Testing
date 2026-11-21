@@ -19,6 +19,15 @@ class CaptureTests(unittest.TestCase):
     def test_reject_extra_fields(self):
         s=sample();s["serial"]="secret"
         with self.assertRaises(ValueError):validate_sample(s)
+    def test_reject_nested_identifier(self):
+        s=sample();s["memory_bytes"]["device_serial"]="secret"
+        with self.assertRaises(ValueError):validate_sample(s)
+    def test_reject_incomplete_swap_pair(self):
+        s=sample();del s["memory_bytes"]["SwapFree"]
+        with self.assertRaises(ValueError):validate_sample(s)
+    def test_accept_no_swap_metrics(self):
+        s=sample();del s["memory_bytes"]["SwapFree"];del s["memory_bytes"]["SwapTotal"]
+        validate_sample(s)
     def test_reject_bad_memory(self):
         s=sample();s["memory_bytes"]["MemAvailable"]=5000
         with self.assertRaises(ValueError):validate_sample(s)
