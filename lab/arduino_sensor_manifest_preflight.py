@@ -18,6 +18,8 @@ def validate(plan):
     errors = []
     if not isinstance(plan, dict) or not isinstance(plan.get("connections"), list):
         return ["plan.connections must be a list"]
+    if not plan["connections"]:
+        errors.append("at least one connection required for review")
     if plan.get("common_ground_verified") is not True:
         errors.append("common ground must be independently verified")
     if plan.get("board_schematics_reviewed") is not True:
@@ -36,7 +38,10 @@ def validate(plan):
         if c["bus"] not in ALLOWED_BUSES or c["direction"] not in ("output-to-input", "bidirectional"):
             errors.append(f"{tag}: unsupported bus/direction")
             continue
-        if c["source_voltage"] not in ALLOWED_LEVELS or c["destination_max_voltage"] not in ALLOWED_LEVELS:
+        if (type(c["source_voltage"]) not in (int, float) or
+                type(c["destination_max_voltage"]) not in (int, float) or
+                c["source_voltage"] not in ALLOWED_LEVELS or
+                c["destination_max_voltage"] not in ALLOWED_LEVELS):
             errors.append(f"{tag}: unsupported or unverified voltage domain")
             continue
         destination = (str(c["destination_board"]), str(c["destination_pin"]))
@@ -48,7 +53,10 @@ def validate(plan):
         if c["bus"] == "i2c":
             if c.get("pullup_voltage_verified") is not True:
                 errors.append(f"{tag}: I2C pull-up voltage not verified")
-            if c.get("pullup_voltage", 99) > c["destination_max_voltage"]:
+            pullup = c.get("pullup_voltage")
+            if type(pullup) not in (int, float) or pullup not in ALLOWED_LEVELS:
+                errors.append(f"{tag}: I2C pull-up voltage missing or invalid")
+            elif pullup > c["destination_max_voltage"]:
                 errors.append(f"{tag}: I2C pull-ups exceed destination rating")
         if c["direction"] == "bidirectional" and c.get("bidirectional_voltage_verified") is not True:
             errors.append(f"{tag}: bidirectional voltage compatibility unverified")
@@ -89,7 +97,21 @@ class OfflineTests(unittest.TestCase):
         self.assertTrue(validate([]))
     def test_empty_plan_not_approval(self):
         self.base["connections"] = []
-        self.assertEqual(validate(self.base), [])
+        self.assertTrue(any("at least one" in e for e in validate(self.base)))
+    def test_reject_string_voltage(self):
+        self.base["connections"][0]["source_voltage"] = "5.0"
+        self.assertTrue(validate(self.base))
+    def test_reject_missing_i2c_pullup(self):
+        c = self.base["connections"][0]
+        c["bus"] = "i2c"
+        c["pullup_voltage_verified"] = True
+        self.assertTrue(any("pull-up voltage missing" in e for e in validate(self.base)))
+    def test_reject_string_i2c_pullup(self):
+        c = self.base["connections"][0]
+        c["bus"] = "i2c"
+        c["pullup_voltage_verified"] = True
+        c["pullup_voltage"] = "3.3"
+        self.assertTrue(any("invalid" in e for e in validate(self.base)))
 
 if __name__ == "__main__":
     if sys.argv[1:] == ["--self-test"]:
