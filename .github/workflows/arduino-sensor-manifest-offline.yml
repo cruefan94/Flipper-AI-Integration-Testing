@@ -1,0 +1,21 @@
+name: Arduino ESP32 wiring manifest offline regression
+on:
+  pull_request:
+    paths:
+      - 'lab/arduino_sensor_manifest_preflight.py'
+      - '.github/workflows/arduino-sensor-manifest-offline.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile offline checker
+        run: python -m py_compile lab/arduino_sensor_manifest_preflight.py
+      - name: Run exact synthetic regression suite
+        run: python lab/arduino_sensor_manifest_preflight.py --self-test
