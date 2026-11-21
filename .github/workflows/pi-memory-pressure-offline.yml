@@ -1,0 +1,20 @@
+name: Pi offline memory pressure regression
+on:
+  push:
+    branches:
+      - pi/offline-memory-pressure-advisor-20261121
+  workflow_dispatch:
+jobs:
+  synthetic:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Syntax and isolated synthetic tests
+        run: |
+          python -m py_compile pi_lab/memory_pressure_advisor.py
+          python pi_lab/memory_pressure_advisor.py -v
