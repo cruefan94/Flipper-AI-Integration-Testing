@@ -1,0 +1,26 @@
+name: Pi browser advisor boundary regressions
+on:
+  push:
+    branches:
+      - pi/browser-advisor-boundary-tests-20261121-1809
+    paths:
+      - 'pi_lab/browser_memory_advisor.py'
+      - 'pi_lab/test_browser_advisor_boundaries.py'
+      - '.github/workflows/pi-browser-advisor-boundaries.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-boundaries:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Run offline boundary tests (no hardware, secrets, or firmware)
+        run: |
+          python3 -m py_compile pi_lab/browser_memory_advisor.py pi_lab/test_browser_advisor_boundaries.py
+          python3 -m unittest discover -s pi_lab -p 'test_browser_advisor_boundaries.py' -v
