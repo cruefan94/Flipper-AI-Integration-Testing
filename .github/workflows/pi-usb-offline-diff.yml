@@ -1,0 +1,22 @@
+name: Pi USB offline diff regression
+on:
+  pull_request:
+    paths:
+      - 'raspberry_pi/usb_inventory_diff.py'
+      - 'tests/test_pi_usb_inventory_diff.py'
+      - '.github/workflows/pi-usb-offline-diff.yml'
+  workflow_dispatch:
+jobs:
+  offline-tests:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile and run synthetic offline tests
+        run: |
+          python -m py_compile raspberry_pi/usb_inventory_diff.py tests/test_pi_usb_inventory_diff.py
+          python -m unittest discover -s tests -p 'test_pi_usb_inventory_diff.py' -v
