@@ -31,9 +31,12 @@ def evaluate(family: str, observations: list[Observation]) -> dict:
         return {"status": "inconclusive", "reason": "unknown pin state"}
     # BOOT strap must be low when EN rises. Observations are not a timing trace:
     # they cannot prove the chip entered download mode or that USB is functional.
+    saw_release = False
     for previous, current in zip(observations, observations[1:]):
         if previous.en == "low" and current.en == "high":
+            saw_release = True
             if current.gpio0 == "low" and previous.gpio0 == "low":
                 return {"status": "candidate", "reason": "observed low GPIO0 across EN release; ROM log verification required"}
-            return {"status": "not-observed", "reason": "GPIO0 low across EN release not observed"}
+    if saw_release:
+        return {"status": "not-observed", "reason": "GPIO0 low across EN release not observed"}
     return {"status": "inconclusive", "reason": "EN low-to-high transition not observed"}
