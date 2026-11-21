@@ -5,6 +5,7 @@ Run with --once for a single snapshot, or --watch --consent for 10s intervals.
 """
 import argparse
 import json
+import math
 from pathlib import Path
 import time
 
@@ -19,8 +20,12 @@ def parse_meminfo(text):
             if len(fields) != 2 or fields[1] != "kB":
                 raise ValueError("unexpected memory units")
             values[name] = int(fields[0]) * 1024
+            if values[name] < 0:
+                raise ValueError("negative memory metric")
     if not {"MemTotal", "MemAvailable"}.issubset(values):
         raise ValueError("missing memory metrics")
+    if values["MemAvailable"] > values["MemTotal"]:
+        raise ValueError("available memory exceeds total")
     return values
 
 def snapshot(proc=Path("/proc"), thermal=Path("/sys/class/thermal/thermal_zone0/temp")):
@@ -28,8 +33,11 @@ def snapshot(proc=Path("/proc"), thermal=Path("/sys/class/thermal/thermal_zone0/
     load = (proc / "loadavg").read_text(encoding="ascii").split()[:3]
     if len(load) != 3:
         raise ValueError("missing load averages")
+    load_values = [float(x) for x in load]
+    if any(not math.isfinite(x) or x < 0 for x in load_values):
+        raise ValueError("invalid load average")
     result = {"status": "read_only", "memory_bytes": memory,
-              "load_averages": [float(x) for x in load],
+              "load_averages": load_values,
               "temperature_c": None, "hardware_control": False}
     try:
         result["temperature_c"] = round(int(thermal.read_text(encoding="ascii").strip()) / 1000, 1)
