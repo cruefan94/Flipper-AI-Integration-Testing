@@ -1,0 +1,39 @@
+name: Pi ESP32 plan-only regression (offline)
+on:
+  push:
+    branches:
+      - lab/pi-esp32-plan-ci-20261121-1226
+    paths:
+      - 'lab/pi_esp32_flash_plan_offline.py'
+      - '.github/workflows/pi-esp32-plan-only-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-plan-tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile and run exactly ten synthetic tests
+        run: |
+          python -m py_compile lab/pi_esp32_flash_plan_offline.py
+          python - <<'PY'
+          import importlib.util, unittest
+          spec = importlib.util.spec_from_file_location("plan", "lab/pi_esp32_flash_plan_offline.py")
+          mod = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(mod)
+          suite = unittest.defaultTestLoader.loadTestsFromTestCase(mod.OfflineTests)
+          assert suite.countTestCases() == 10, f"Expected exactly 10 tests, got {suite.countTestCases()}"
+          result = unittest.TextTestRunner(verbosity=2).run(suite)
+          assert result.wasSuccessful() and not result.skipped, "Failed or skipped synthetic tests"
+          PY
+      - name: Execution boundary
+        run: echo "Plan-only synthetic tests; no device, serial port, radio, private firmware, or flashing."
