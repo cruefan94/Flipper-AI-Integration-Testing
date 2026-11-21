@@ -1,0 +1,11 @@
+{
+  "links": [
+    {
+      "source": "arduino_uno",
+      "target": "esp32_wroom",
+      "kind": "uart",
+      "source_high_volts": 5,
+      "common_ground_verified": true
+    }
+  ]
+}
