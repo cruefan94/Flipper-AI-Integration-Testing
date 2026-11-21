@@ -1,0 +1,21 @@
+name: Public-safe CI failure routing regression
+on:
+  pull_request:
+    paths:
+      - 'tools/ci_failure_scope.py'
+      - 'tools/test_ci_failure_scope.py'
+      - '.github/workflows/ci-failure-scope.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline-routing-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Run sanitized metadata tests only
+        run: python -m unittest discover -s tools -p 'test_ci_failure_scope.py' -v
