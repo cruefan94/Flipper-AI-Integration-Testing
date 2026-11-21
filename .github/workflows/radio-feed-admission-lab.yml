@@ -1,0 +1,35 @@
+name: Radio feed admission offline regression
+on:
+  pull_request:
+    branches:
+      - lab/radio-feed-consent-gate-20261121-0119
+    paths:
+      - 'lab/radio/radio_feed_admission.py'
+      - '.github/workflows/radio-feed-admission-lab.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile offline checker
+        run: python3 -m py_compile lab/radio/radio_feed_admission.py
+      - name: Run exactly ten synthetic admission tests
+        run: |
+          python3 - <<'PY'
+          import importlib.util, unittest
+          path = 'lab/radio/radio_feed_admission.py'
+          spec = importlib.util.spec_from_file_location('radio_feed_admission', path)
+          module = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(module)
+          suite = unittest.defaultTestLoader.loadTestsFromTestCase(module.Tests)
+          result = unittest.TextTestRunner(verbosity=2).run(suite)
+          assert result.testsRun == 10, f'Expected 10 tests; ran {result.testsRun}'
+          assert result.wasSuccessful() and not result.skipped, 'Regression gate failed'
+          PY
