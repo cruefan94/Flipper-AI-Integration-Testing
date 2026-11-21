@@ -58,6 +58,8 @@ def validate(plan):
                 errors.append(f"{tag}: I2C pull-up voltage missing or invalid")
             elif pullup > c["destination_max_voltage"]:
                 errors.append(f"{tag}: I2C pull-ups exceed destination rating")
+            if type(pullup) in (int, float) and pullup in ALLOWED_LEVELS and pullup > c["source_voltage"]:
+                errors.append(f"{tag}: I2C pull-ups exceed source voltage domain")
         if c["direction"] == "bidirectional" and c.get("bidirectional_voltage_verified") is not True:
             errors.append(f"{tag}: bidirectional voltage compatibility unverified")
     return errors
@@ -106,6 +108,15 @@ class OfflineTests(unittest.TestCase):
         c["bus"] = "i2c"
         c["pullup_voltage_verified"] = True
         self.assertTrue(any("pull-up voltage missing" in e for e in validate(self.base)))
+    def test_reject_i2c_pullup_above_source_domain(self):
+        c = self.base["connections"][0]
+        c["bus"] = "i2c"
+        c["source_voltage"] = 3.3
+        c["destination_max_voltage"] = 5.0
+        c["pullup_voltage_verified"] = True
+        c["pullup_voltage"] = 5.0
+        self.assertTrue(any("exceed source voltage domain" in e for e in validate(self.base)))
+
     def test_reject_string_i2c_pullup(self):
         c = self.base["connections"][0]
         c["bus"] = "i2c"
