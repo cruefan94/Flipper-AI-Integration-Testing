@@ -1,0 +1,26 @@
+name: Lab radio provenance offline tests
+on:
+  push:
+    branches:
+      - lab/radio-provenance-exact-ci-20261121-0427
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  synthetic-provenance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile offline parser and test module
+        run: python3 -m py_compile lab/radio/radio_provenance_preflight.py lab/radio/test_radio_provenance_preflight.py
+      - name: Require nine synthetic tests without skips
+        run: |
+          python3 - <<'PY'
+          import sys, unittest
+          sys.path.insert(0, 'lab/radio')
+          suite = unittest.defaultTestLoader.discover('lab/radio', pattern='test_radio_provenance_preflight.py')
+          result = unittest.TextTestRunner(verbosity=2).run(suite)
+          if not result.wasSuccessful() or result.testsRun != 9 or len(result.skipped):
+              raise SystemExit('Expected exactly 9 passing synthetic tests with zero skips')
+          PY
