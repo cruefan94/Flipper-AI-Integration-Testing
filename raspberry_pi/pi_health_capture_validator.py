@@ -17,6 +17,11 @@ def validate_sample(sample):
     memory = sample.get("memory_bytes")
     if not isinstance(memory, dict):
         raise ValueError("missing memory metrics")
+    allowed_memory = {"MemTotal", "MemAvailable", "SwapTotal", "SwapFree"}
+    if set(memory) - allowed_memory:
+        raise ValueError("unexpected memory fields; redact capture before validating")
+    if ("SwapTotal" in memory) != ("SwapFree" in memory):
+        raise ValueError("incomplete swap metrics")
     for key in ("MemTotal", "MemAvailable"):
         value = memory.get(key)
         if type(value) is not int or value < 0:
