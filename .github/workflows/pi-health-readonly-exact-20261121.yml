@@ -1,0 +1,25 @@
+name: Pi health read-only exact regression
+on:
+  push:
+    branches:
+      - test/pi-health-exact-ci-20261121-0616
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  pi-health-tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile and run isolated synthetic Pi health tests
+        run: |
+          python -m py_compile raspberry_pi/pi_health_readonly.py tests/test_pi_health_readonly.py
+          python -m unittest discover -s tests -p 'test_pi_health_readonly.py' -v
+      - name: Safety boundary
+        run: echo "Synthetic only; no Pi hardware, Pironman control, credentials, firmware, or private source."
