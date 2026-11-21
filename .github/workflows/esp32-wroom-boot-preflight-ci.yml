@@ -1,0 +1,37 @@
+name: ESP32 WROOM offline boot preflight (nine tests)
+on:
+  push:
+    branches:
+      - 'lab/esp32-wroom-boot-ci-20261121-0921'
+  pull_request:
+    paths:
+      - 'lab/esp32_wroom_boot_preflight.py'
+      - '.github/workflows/esp32-wroom-boot-preflight-ci.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile and run exactly nine offline regression tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile lab/esp32_wroom_boot_preflight.py
+          python - <<'PY'
+          import importlib.util
+          import unittest
+          spec = importlib.util.spec_from_file_location('preflight', 'lab/esp32_wroom_boot_preflight.py')
+          module = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(module)
+          suite = unittest.defaultTestLoader.loadTestsFromTestCase(module.OfflineTests)
+          assert suite.countTestCases() == 9, f"Expected nine tests, found {suite.countTestCases()}"
+          result = unittest.TextTestRunner(verbosity=2).run(suite)
+          assert result.testsRun == 9 and result.wasSuccessful() and not result.skipped, "Nine passing unskipped tests required"
+          PY
