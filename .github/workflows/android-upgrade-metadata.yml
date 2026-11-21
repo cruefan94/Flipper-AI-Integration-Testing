@@ -1,0 +1,20 @@
+name: Android upgrade metadata safety (synthetic)
+on:
+  pull_request:
+    paths:
+      - 'tests/android_upgrade_metadata_gate.py'
+      - '.github/workflows/android-upgrade-metadata.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  synthetic-metadata:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Seven offline safety tests (no credentials or APK)
+        run: python3 tests/android_upgrade_metadata_gate.py
