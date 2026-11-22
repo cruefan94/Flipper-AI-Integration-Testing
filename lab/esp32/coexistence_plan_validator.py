@@ -22,7 +22,7 @@ def validate(plan):
             errors.append("board entry must be an object")
             continue
         board = item.get("board")
-        if board not in ALLOWED_ROLES or board in seen:
+        if not isinstance(board, str) or board not in ALLOWED_ROLES or board in seen:
             errors.append("unknown or duplicate board")
             continue
         seen.add(board)
@@ -69,6 +69,15 @@ class Tests(unittest.TestCase):
         self.assertTrue(validate(self.plan))
     def test_shared_rail(self):
         self.plan["shared_power_rail"] = True
+        self.assertTrue(validate(self.plan))
+    def test_unhashable_board(self):
+        self.plan["boards"][0]["board"] = ["wroom"]
+        self.assertIn("unknown or duplicate board", validate(self.plan))
+    def test_unhashable_port(self):
+        self.plan["boards"][0]["port"] = ["pi-uart0"]
+        self.assertIn("missing or shared UART port", validate(self.plan))
+    def test_null_board(self):
+        self.plan["boards"][0]["board"] = None
         self.assertTrue(validate(self.plan))
     def test_missing_board(self):
         self.plan["boards"].pop()
