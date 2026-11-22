@@ -72,19 +72,19 @@ class UsbInventoryTests(unittest.TestCase):
 
     def test_duplicate_inventory_line_is_not_a_second_device(self):
         line = "Bus 001 Device 003: ID 0483:5740 redacted"
-        result = summarize_lsusb(line + "\\n" + line)
+        result = summarize_lsusb(line + "\n" + line)
         self.assertEqual((result.device_count, result.st_vendor_count), (1, 1))
 
     def test_same_vendor_on_distinct_usb_addresses(self):
         result = summarize_lsusb(
-            "Bus 001 Device 003: ID 0483:5740\\n"
+            "Bus 001 Device 003: ID 0483:5740\n"
             "Bus 001 Device 004: ID 0483:5740"
         )
         self.assertEqual((result.device_count, result.st_vendor_count), (2, 2))
 
     def test_repeated_address_with_different_description(self):
         result = summarize_lsusb(
-            "Bus 001 Device 003: ID 0483:5740 First\\n"
+            "Bus 001 Device 003: ID 0483:5740 First\n"
             "Bus 001 Device 003: ID 0483:5740 Second"
         )
         self.assertEqual(result.device_count, 1)
