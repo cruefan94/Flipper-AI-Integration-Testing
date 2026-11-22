@@ -10,6 +10,14 @@ import unittest
 INTERVAL_SECONDS = 10
 SOURCES = ("pi", "oled", "flipper", "esp32")
 STATUSES = ("OK", "STALE", "MISSING", "INVALID")
+MAX_TIMESTAMP_SECONDS = 1_000_000_000_000_000
+
+
+def valid_timestamp(value: object) -> bool:
+    """Bound timestamps before math.isfinite to avoid huge-int overflow."""
+    if type(value) is int:
+        return 0 <= value <= MAX_TIMESTAMP_SECONDS
+    return type(value) is float and isfinite(value) and 0 <= value <= MAX_TIMESTAMP_SECONDS
 
 
 @dataclass(frozen=True)
@@ -21,7 +29,7 @@ class SourceStatus:
 
 def evaluate_sources(now: object, observations: object) -> tuple[SourceStatus, ...]:
     """Return fixed-label status for each source; never echo supplied data."""
-    if type(now) not in (int, float) or not isfinite(now) or now < 0:
+    if not valid_timestamp(now):
         raise ValueError("invalid time")
     if type(observations) is not dict:
         raise ValueError("invalid observations")
@@ -31,7 +39,7 @@ def evaluate_sources(now: object, observations: object) -> tuple[SourceStatus, .
             results.append(SourceStatus(source, "MISSING", None))
             continue
         value = observations[source]
-        if type(value) not in (int, float) or not isfinite(value) or value < 0 or value > now:
+        if not valid_timestamp(value) or value > now:
             results.append(SourceStatus(source, "INVALID", None))
             continue
         age = now - value
@@ -66,6 +74,18 @@ class OfflineMonitorTests(unittest.TestCase):
 
     def test_infinity_rejected(self):
         self.assertEqual(evaluate_sources(100, {"pi": float("inf")})[0].status, "INVALID")
+
+    def test_huge_integer_clock_rejected(self):
+        with self.assertRaises(ValueError):
+            evaluate_sources(10 ** 10000, {})
+
+    def test_huge_integer_observation_invalid(self):
+        self.assertEqual(evaluate_sources(100, {"pi": 10 ** 10000})[0].status, "INVALID")
+
+    def test_timestamp_cap_boundary(self):
+        self.assertEqual(evaluate_sources(MAX_TIMESTAMP_SECONDS, {"pi": MAX_TIMESTAMP_SECONDS})[0].status, "OK")
+        with self.assertRaises(ValueError):
+            evaluate_sources(MAX_TIMESTAMP_SECONDS + 1, {})
 
     def test_invalid_clock(self):
         with self.assertRaises(ValueError):
