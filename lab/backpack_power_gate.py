@@ -37,10 +37,10 @@ def evaluate(plan):
             errors.append(prefix + " must be an object")
             continue
         name = load.get("name")
-        if not isinstance(name, str) or not name.strip() or name in seen:
+        if not isinstance(name, str) or not name.strip() or " ".join(name.split()).casefold() in seen:
             errors.append(prefix + " name must be unique and nonempty")
         else:
-            seen.add(name)
+            seen.add(" ".join(name.split()).casefold())
         for key in ("voltage_v", "peak_ma"):
             if not valid_number(load.get(key)):
                 errors.append(prefix + " " + key + " invalid")
@@ -79,6 +79,16 @@ class OfflineTests(unittest.TestCase):
     def test_duplicate_load(self):
         self.good["loads"].append(self.good["loads"][0].copy())
         self.assertTrue(evaluate(self.good))
+    def test_duplicate_case_alias(self):
+        self.good["loads"].append(dict(name="BOARD", voltage_v=5, peak_ma=500, verified=True))
+        self.assertTrue(evaluate(self.good))
+    def test_duplicate_whitespace_alias(self):
+        self.good["loads"][0]["name"] = "esp32  wroom"
+        self.good["loads"].append(dict(name=" esp32 wroom ", voltage_v=5, peak_ma=500, verified=True))
+        self.assertTrue(evaluate(self.good))
+    def test_distinct_load_names(self):
+        self.good["loads"].append(dict(name="other", voltage_v=5, peak_ma=500, verified=True))
+        self.assertEqual(evaluate(self.good), [])
     def test_malformed_load(self):
         self.good["loads"] = [None]
         self.assertTrue(evaluate(self.good))
