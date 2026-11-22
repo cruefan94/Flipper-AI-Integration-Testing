@@ -1,0 +1,19 @@
+name: ESP32 boot plan offline preflight
+on:
+  pull_request:
+    paths:
+      - 'lab/esp32/boot_mode_offline_preflight.py'
+      - '.github/workflows/esp32-boot-offline.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Offline synthetic boot sequence validation
+        run: python3 lab/esp32/boot_mode_offline_preflight.py --self-test
