@@ -1,0 +1,105 @@
+name: ESP32 Expansion isolated source checks
+on:
+  push:
+    paths:
+      - 'esp32-expansion/**'
+      - '.github/workflows/esp32-companion.yml'
+  pull_request:
+    paths:
+      - 'esp32-expansion/**'
+      - '.github/workflows/esp32-companion.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  protocol-host:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile and execute bounded protocol parser tests
+        run: |
+          set -euo pipefail
+          g++ -std=c++17 -Wall -Wextra -Werror -Iesp32-expansion/firmware/src \
+            esp32-expansion/firmware/src/protocol.cpp \
+            esp32-expansion/tests/test_protocol.cpp -o /tmp/fz1-protocol-test
+          /tmp/fz1-protocol-test
+  esp32-reference:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install PlatformIO
+        run: python3 -m pip install --user platformio
+      - name: Build classic ESP32 DevKit example (NOT board validated)
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.local/bin:$PATH"
+          pio run -d esp32-expansion/firmware -e esp32dev
+      - uses: actions/upload-artifact@v4
+        with:
+          name: esp32dev-reference-firmware-NOT-FLASH-VERIFIED
+          path: |
+            esp32-expansion/firmware/.pio/build/esp32dev/firmware.bin
+            esp32-expansion/firmware/.pio/build/esp32dev/bootloader.bin
+            esp32-expansion/firmware/.pio/build/esp32dev/partitions.bin
+          if-no-files-found: error
+          retention-days: 7
+  flipper-app:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install upstream Flipper build tool
+        run: python3 -m pip install --user ufbt
+      - name: Build ESP32 Manager FAP against official SDK (NOT Momentum validated)
+        working-directory: esp32-expansion/flipper
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.local/bin:$PATH"
+          ufbt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: esp32-manager-upstream-FAP-NOT-MOMENTUM-VERIFIED
+          path: esp32-expansion/flipper/dist/**/*.fap
+          if-no-files-found: error
+          retention-days: 7
+  stage-sd-package:
+    name: Bundle ESP32 sensor package for future main firmware installer
+    runs-on: ubuntu-22.04
+    needs: [protocol-host, esp32-reference, flipper-app]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: esp32dev-reference-firmware-NOT-FLASH-VERIFIED
+          path: artifacts/esp32
+      - uses: actions/download-artifact@v4
+        with:
+          name: esp32-manager-upstream-FAP-NOT-MOMENTUM-VERIFIED
+          path: artifacts/flipper
+      - name: Stage SD-card companion files with SHA-256 manifest
+        run: |
+          set -euo pipefail
+          mkdir -p stage/SD_CARD/apps/GPIO stage/SD_CARD/apps_data/esp32_expansion/firmware
+          test "$(find artifacts/flipper -name '*.fap' -type f | wc -l)" -eq 1
+          find artifacts/flipper -name '*.fap' -type f -exec cp {} stage/SD_CARD/apps/GPIO/flipper_esp_manager.fap \;
+          for name in firmware.bin bootloader.bin partitions.bin; do
+            file="$(find artifacts/esp32 -name "$name" -type f -print -quit)"
+            test -n "$file"
+            cp "$file" "stage/SD_CARD/apps_data/esp32_expansion/firmware/$name"
+          done
+          cp esp32-expansion/SENSOR_MODULES.md stage/SENSOR_MODULES.md
+          printf '%s\n' \
+            'CANDIDATE ONLY: Flipper FAP uses official SDK; NOT Momentum or device verified.' \
+            'ESP32 images use provisional esp32dev target; do not flash without board/offset verification.' \
+            'This bundle is NOT an installed Flipper OS update. No automatic programming is performed.' \
+            > stage/READ_FIRST.txt
+          (cd stage && find . -type f -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS.txt)
+          (cd stage && zip -qr ../ESP32-Sensor-Hub-UNTESTED-SD-Bundle.zip .)
+          unzip -t ESP32-Sensor-Hub-UNTESTED-SD-Bundle.zip | tail -n 1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ESP32-Sensor-Hub-UNTESTED-SD-Bundle
+          path: ESP32-Sensor-Hub-UNTESTED-SD-Bundle.zip
+          if-no-files-found: error
+          retention-days: 7
