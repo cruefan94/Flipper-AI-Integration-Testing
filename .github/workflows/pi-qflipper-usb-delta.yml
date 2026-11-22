@@ -1,0 +1,28 @@
+name: Pi qFlipper offline USB delta tests
+on:
+  push:
+    branches:
+      - pi/qflipper-delta-ci-20261122-1308
+  pull_request:
+    paths:
+      - 'pi_tools/qflipper_usb_delta_offline.py'
+      - 'pi_tools/qflipper_usb_inventory_offline.py'
+      - '.github/workflows/pi-qflipper-usb-delta.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline-usb-delta:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile offline Pi modules
+        run: python -m py_compile pi_tools/qflipper_usb_inventory_offline.py pi_tools/qflipper_usb_delta_offline.py
+      - name: Run synthetic USB inventory tests
+        run: python pi_tools/qflipper_usb_inventory_offline.py -v
+      - name: Run synthetic USB snapshot delta tests
+        run: python pi_tools/qflipper_usb_delta_offline.py -v
