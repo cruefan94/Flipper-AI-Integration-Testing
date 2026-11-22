@@ -1,0 +1,19 @@
+name: Public-safe fallback scope gate
+on:
+  pull_request:
+    paths:
+      - 'tests/test_fallback_scope_gate.py'
+      - '.github/workflows/fallback-scope-gate.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline-fallback-scope:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Reject diagnostic-only fallback promotion
+        run: python -m unittest discover -s tests -p 'test_fallback_scope_gate.py' -v
