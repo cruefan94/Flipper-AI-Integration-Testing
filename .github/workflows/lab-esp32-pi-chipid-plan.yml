@@ -1,0 +1,20 @@
+name: ESP32 Pi chip-ID offline planner
+on:
+  push:
+    branches:
+      - lab/esp32-pi-chipid-plan-20261122-0528
+  pull_request:
+    branches:
+      - lab/pi-esp32-port-inventory-offline-20261122-0420
+permissions:
+  contents: read
+jobs:
+  offline-plan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python3 -m py_compile lab/esp32/pi_chipid_readonly_plan.py
+      - run: python3 lab/esp32/pi_chipid_readonly_plan.py --self-test
