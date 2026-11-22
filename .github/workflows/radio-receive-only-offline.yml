@@ -1,0 +1,23 @@
+name: Radio receive-only feed metadata offline tests
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'lab/radio/receive_only_feed_policy.py'
+      - '.github/workflows/radio-receive-only-offline.yml'
+  workflow_dispatch:
+jobs:
+  offline-policy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile and run synthetic metadata tests
+        run: |
+          python -m py_compile lab/radio/receive_only_feed_policy.py
+          python lab/radio/receive_only_feed_policy.py -v
