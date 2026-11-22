@@ -25,7 +25,7 @@ def validate_feed(entry):
     try:
         parsed = urlsplit(url)
         host = parsed.hostname
-        if parsed.scheme != "https" or not host or parsed.username or parsed.password or parsed.fragment or parsed.port not in (None, 443):
+        if parsed.scheme != "https" or not host or parsed.username or parsed.password or parsed.query or parsed.fragment or parsed.port not in (None, 443):
             return False, "unsafe_url"
         if host.lower() in {"localhost", "localhost.localdomain"} or host.lower().endswith((".local", ".internal", ".localhost")):
             return False, "local_host"
@@ -69,6 +69,10 @@ class FeedPolicyTests(unittest.TestCase):
         self.check("url", "https://localhost/listen")
     def test_reject_private_ip(self):
         self.check("url", "https://192.168.1.1/listen")
+    def test_reject_query_token(self):
+        self.check("url", "https://example.org/listen?token=not-a-real-token")
+    def test_reject_query_parameter(self):
+        self.check("url", "https://example.org/listen?station=1")
     def test_reject_fragment(self):
         self.check("url", "https://example.org/listen#token")
     def test_reject_bad_schema(self):
