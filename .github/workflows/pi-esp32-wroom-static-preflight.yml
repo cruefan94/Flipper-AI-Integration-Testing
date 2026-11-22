@@ -1,0 +1,21 @@
+name: Pi ESP32-WROOM static serial preflight
+on:
+  pull_request:
+    paths:
+      - 'lab/esp32/pi_wroom_static_preflight.py'
+      - '.github/workflows/pi-esp32-wroom-static-preflight.yml'
+  workflow_dispatch:
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile Python source
+        run: python -m py_compile lab/esp32/pi_wroom_static_preflight.py
+      - name: Run nine offline synthetic cases
+        run: python lab/esp32/pi_wroom_static_preflight.py --self-test
