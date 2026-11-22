@@ -119,7 +119,7 @@ class UsbInventoryTests(unittest.TestCase):
 
     def test_mixed_valid_and_malformed_address_rejected(self):
         with self.assertRaises(ValueError):
-            summarize_lsusb("Bus 001 Device 002: ID 2109:3431\\nBus 001 Device 003: ID missing")
+            summarize_lsusb("Bus 001 Device 002: ID 2109:3431\nBus 001 Device 003: ID missing")
 
     def test_no_usb_commands(self):
         self.assertFalse(hasattr(__import__(__name__), "scan_hardware"))
