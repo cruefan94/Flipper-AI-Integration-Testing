@@ -1,0 +1,20 @@
+name: Offline branch-scoped fallback tests
+on:
+  pull_request:
+    paths:
+      - 'tools/branch_scoped_fallback_classifier.py'
+      - 'tests/test_branch_scoped_fallback_classifier.py'
+      - '.github/workflows/branch-scoped-fallback-tests.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  synthetic-fallback:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run isolated synthetic fallback tests
+        run: python -m unittest discover -s tests -p 'test_branch_scoped_fallback_classifier.py' -v
