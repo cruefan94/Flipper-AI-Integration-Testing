@@ -1,0 +1,21 @@
+name: Public-safe release evidence gate
+on:
+  pull_request:
+    paths:
+      - 'tools/release_evidence_gate.py'
+      - 'tests/test_release_evidence_gate.py'
+      - '.github/workflows/public-release-evidence-gate.yml'
+  push:
+    branches:
+      - 'test/release-evidence-failclosed-20261121-2201'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  synthetic-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run offline synthetic release evidence tests
+        run: python3 -m unittest discover -s tests -p 'test_release_evidence_gate.py' -v
