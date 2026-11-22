@@ -1,0 +1,25 @@
+name: Pi qFlipper offline USB inventory tests
+on:
+  push:
+    branches:
+      - pi/qflipper-usb-ci-20261122-0411
+  pull_request:
+    paths:
+      - 'pi_tools/qflipper_usb_inventory_offline.py'
+      - '.github/workflows/pi-qflipper-usb-inventory.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline-usb-parser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile isolated Pi parser
+        run: python -m py_compile pi_tools/qflipper_usb_inventory_offline.py
+      - name: Run synthetic offline unit tests
+        run: python pi_tools/qflipper_usb_inventory_offline.py -v
