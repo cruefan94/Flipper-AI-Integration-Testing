@@ -43,7 +43,7 @@ class Tests(unittest.TestCase):
         self.assertEqual(make_plan(self.valid)["chip"], "esp32s3")
     def test_serial_by_id(self):
         self.valid["port"] = "/dev/serial/by-id/usb-CP2102_123"
-        self.assertEqual(make_plan(self.valid)["argv"][5], self.valid["port"])
+        self.assertEqual(make_plan(self.valid)["argv"][6], self.valid["port"])
     def test_injection(self):
         self.valid["port"] = "/dev/ttyUSB0;touch /tmp/x"
         with self.assertRaises(ValueError): make_plan(self.valid)
