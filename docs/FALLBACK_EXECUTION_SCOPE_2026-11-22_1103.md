@@ -1,0 +1,16 @@
+# Public-safe fallback execution evidence — 2026-11-22 11:03 EST
+
+Newly verified successful fallback runs (actual jobs inspected):
+- [45039819048](https://github.com/cruefan94/Flipper-AI-Integration-Testing/actions/runs/45039819048), triggered from failed Momentum 45008110405: firmware/custom-firmware job passed private temporary checkout, native Momentum compilation, updater verification and encrypted-only artifact upload. Contract, Android, protocol and diagnostic jobs skipped.
+- [45039817534](https://github.com/cruefan94/Flipper-AI-Integration-Testing/actions/runs/45039817534), triggered from failed Momentum 45033809524: firmware/custom-firmware job passed the same native/encrypted-only scope; other jobs skipped.
+- [45039820581](https://github.com/cruefan94/Flipper-AI-Integration-Testing/actions/runs/45039820581), triggered from failed Momentum 44993159677: four private C versus public Android Java protocol matrix jobs passed; firmware and APK jobs skipped.
+- [45039780200](https://github.com/cruefan94/Flipper-AI-Integration-Testing/actions/runs/45039780200): automatic CI failover monitor and policy test passed.
+
+These are genuine fallback dispatches, superseding earlier notes that fallback had not executed. Do not equate a successful fallback with all skipped jobs or physical acceptance. The native firmware job's named updater verification is host-side evidence only: independent exact-artifact firmware.dfu suffix CRC, internal checksums, SHA-256, encrypted artifact provenance and qFlipper recovery evidence remain release gates.
+
+Latest cross-repository heads:
+- Android [PR 129](https://github.com/cruefan94/Flipper-AI-Android-Satellite/pull/129) head 4414f8794055aa09609003f30958c51e4ba3e486: [combined APK 45040414698](https://github.com/cruefan94/Flipper-AI-Android-Satellite/actions/runs/45040414698) and [metadata 45040414746](https://github.com/cruefan94/Flipper-AI-Android-Satellite/actions/runs/45040414746) passed. Signing continuity, versionCode upgrade, exact artifact hash and physical AI1 remain unverified.
+- Momentum [PR 87](https://github.com/cruefan94/Flipper-AI-Momentum-/pull/87) head 3b849075a7525c923155d303c6fb816e7e01ac2a: [FAP 45033821260](https://github.com/cruefan94/Flipper-AI-Momentum-/actions/runs/45033821260) and [F7 45033821227](https://github.com/cruefan94/Flipper-AI-Momentum-/actions/runs/45033821227) failed. Root cause not established here. PR 86 two-failure pair 45008101314/45008110405 met policy; the latter now has successful firmware fallback, NOT standalone FAP proof.
+- Historical [native F7 43828499328](https://github.com/cruefan94/Flipper-AI-Integration-Testing/actions/runs/43828499328) succeeded as a build job; [PR 22](https://github.com/cruefan94/Flipper-AI-Integration-Testing/pull/22) remains open at 32f631c846db67d5f581887c00bbd06599b665c6.
+
+Release hold: neither unified Android test APK nor F7 TGZ promoted. Never retry the failed CRC 9-99 artifact or replace an installed APK with incompatible signing. No protected merges, flashing, installations, public private-source exposure or credential transfer. Next: inspect private FAP pre-job failure diagnostics, independently attest exact native DFU CRC/hash/source identity and Android installed signing fingerprint, and only then consider candidate promotion.
