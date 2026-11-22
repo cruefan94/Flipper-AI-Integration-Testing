@@ -31,10 +31,12 @@ def validate(plan):
         if item.get("uart_logic") != ALLOWED_LOGIC:
             errors.append("3.3V UART logic required for " + board)
         port = item.get("port")
-        if not isinstance(port, str) or not port or port in ports:
+        if not isinstance(port, str) or not port or port != port.strip() or any(ch.isspace() for ch in port):
+            errors.append("missing or invalid UART port")
+        elif port.casefold() in ports:
             errors.append("missing or shared UART port")
         else:
-            ports.add(port)
+            ports.add(port.casefold())
         if item.get("power_verified") is not True:
             errors.append("power verification required for " + board)
     if seen != set(ALLOWED_ROLES):
@@ -58,6 +60,15 @@ class Tests(unittest.TestCase):
     def test_duplicate_port(self):
         self.plan["boards"][1]["port"] = "pi-uart0"
         self.assertTrue(validate(self.plan))
+    def test_case_variant_port_collision(self):
+        self.plan["boards"][1]["port"] = "PI-UART0"
+        self.assertIn("missing or shared UART port", validate(self.plan))
+    def test_whitespace_port_alias(self):
+        self.plan["boards"][1]["port"] = " pi-uart0 "
+        self.assertIn("missing or invalid UART port", validate(self.plan))
+    def test_embedded_whitespace_port(self):
+        self.plan["boards"][0]["port"] = "pi uart0"
+        self.assertIn("missing or invalid UART port", validate(self.plan))
     def test_wrong_role(self):
         self.plan["boards"][1]["role"] = "pi-uart"
         self.assertTrue(validate(self.plan))
