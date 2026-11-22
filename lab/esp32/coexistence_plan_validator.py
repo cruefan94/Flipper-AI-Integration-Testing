@@ -86,7 +86,7 @@ class Tests(unittest.TestCase):
         self.assertIn("unknown or duplicate board", validate(self.plan))
     def test_unhashable_port(self):
         self.plan["boards"][0]["port"] = ["pi-uart0"]
-        self.assertIn("missing or shared UART port", validate(self.plan))
+        self.assertIn("missing or invalid UART port", validate(self.plan))
     def test_null_board(self):
         self.plan["boards"][0]["board"] = None
         self.assertTrue(validate(self.plan))
