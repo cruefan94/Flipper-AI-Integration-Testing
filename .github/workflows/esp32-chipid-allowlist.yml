@@ -1,0 +1,19 @@
+name: ESP32 offline chip-ID argument allowlist
+on:
+  pull_request:
+    paths:
+      - 'lab/esp32/offline_chipid_command_allowlist.py'
+      - '.github/workflows/esp32-chipid-allowlist.yml'
+  workflow_dispatch:
+jobs:
+  offline-tests:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python3 -m py_compile lab/esp32/offline_chipid_command_allowlist.py
+      - run: python3 lab/esp32/offline_chipid_command_allowlist.py --self-test
