@@ -28,9 +28,16 @@ def summarize_lsusb(snapshot: object) -> UsbInventory:
     if type(snapshot) is not str or len(snapshot) > MAX_INPUT_CHARS:
         raise ValueError("invalid USB snapshot")
     count = st = 0
+    seen = set()
     for line in snapshot.splitlines():
         match = USB_LINE.match(line)
         if match:
+            # A pasted inventory may repeat the same USB address; do not
+            # report repeated lines as additional physical devices.
+            address = tuple(line.split()[:4])
+            if address in seen:
+                continue
+            seen.add(address)
             count += 1
             if match.group(1).lower() == FLIPPER_VENDOR_ID:
                 st += 1
@@ -62,6 +69,25 @@ class UsbInventoryTests(unittest.TestCase):
     def test_reject_excessive_input(self):
         with self.assertRaises(ValueError):
             summarize_lsusb("x" * (MAX_INPUT_CHARS + 1))
+
+    def test_duplicate_inventory_line_is_not_a_second_device(self):
+        line = "Bus 001 Device 003: ID 0483:5740 redacted"
+        result = summarize_lsusb(line + "\\n" + line)
+        self.assertEqual((result.device_count, result.st_vendor_count), (1, 1))
+
+    def test_same_vendor_on_distinct_usb_addresses(self):
+        result = summarize_lsusb(
+            "Bus 001 Device 003: ID 0483:5740\\n"
+            "Bus 001 Device 004: ID 0483:5740"
+        )
+        self.assertEqual((result.device_count, result.st_vendor_count), (2, 2))
+
+    def test_repeated_address_with_different_description(self):
+        result = summarize_lsusb(
+            "Bus 001 Device 003: ID 0483:5740 First\\n"
+            "Bus 001 Device 003: ID 0483:5740 Second"
+        )
+        self.assertEqual(result.device_count, 1)
 
     def test_no_usb_commands(self):
         self.assertFalse(hasattr(__import__(__name__), "scan_hardware"))
