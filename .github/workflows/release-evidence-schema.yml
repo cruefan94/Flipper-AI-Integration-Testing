@@ -1,0 +1,19 @@
+name: Release evidence schema (public-safe)
+on:
+  pull_request:
+    paths:
+      - 'scripts/validate_release_evidence.py'
+      - '.github/workflows/release-evidence-schema.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline-schema:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Run synthetic offline schema regression tests
+        run: python3 scripts/validate_release_evidence.py --self-test
