@@ -1,0 +1,26 @@
+name: Pi meminfo parser offline tests
+on:
+  push:
+    branches:
+      - pi/meminfo-snapshot-parser-20261121-1914
+    paths:
+      - 'pi_lab/meminfo_snapshot_parser.py'
+      - 'pi_lab/browser_memory_advisor.py'
+      - '.github/workflows/pi-meminfo-parser.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-meminfo:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Compile and run isolated offline parser tests
+        run: |
+          python3 -m py_compile pi_lab/browser_memory_advisor.py pi_lab/meminfo_snapshot_parser.py
+          python3 -m unittest discover -s pi_lab -p 'meminfo_snapshot_parser.py' -v

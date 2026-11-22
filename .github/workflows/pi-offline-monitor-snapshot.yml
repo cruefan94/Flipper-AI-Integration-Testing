@@ -1,0 +1,23 @@
+name: Pi offline monitor snapshot tests
+on:
+  push:
+    branches:
+      - pi/offline-monitor-snapshot-20261121-2115
+    paths:
+      - 'pi_lab/offline_monitor_snapshot.py'
+      - '.github/workflows/pi-offline-monitor-snapshot.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline-monitor:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Run synthetic offline tests
+        run: |
+          python3 -m py_compile pi_lab/offline_monitor_snapshot.py
+          python3 -m unittest discover -s pi_lab -p 'offline_monitor_snapshot.py' -v
