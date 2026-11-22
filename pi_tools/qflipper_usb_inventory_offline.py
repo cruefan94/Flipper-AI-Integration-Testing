@@ -8,6 +8,7 @@ import re
 import unittest
 
 USB_LINE = re.compile(r"^Bus\s+\d{3}\s+Device\s+\d{3}:\s+ID\s+([0-9a-fA-F]{4}):([0-9a-fA-F]{4})(?:\s|$)")
+USB_ADDRESS_PREFIX = re.compile(r"^Bus\s+\d{3}\s+Device\s+\d{3}:")
 FLIPPER_VENDOR_ID = "0483"  # STMicroelectronics; not sufficient to identify Flipper
 MAX_INPUT_CHARS = 65536
 
@@ -31,6 +32,10 @@ def summarize_lsusb(snapshot: object) -> UsbInventory:
     seen = {}
     for line in snapshot.splitlines():
         match = USB_LINE.match(line)
+        if not match and USB_ADDRESS_PREFIX.match(line):
+            # A recognizable address with a missing/broken ID is not a safe
+            # complete snapshot; do not silently undercount devices.
+            raise ValueError("malformed USB identity at recognized address")
         if match:
             # A pasted inventory may repeat the same USB address; do not
             # report repeated lines as additional physical devices.
@@ -103,6 +108,18 @@ class UsbInventoryTests(unittest.TestCase):
     def test_same_identity_different_case_deduplicates(self):
         result = summarize_lsusb("Bus 001 Device 003: ID 0483:ABCD\nBus 001 Device 003: ID 0483:abcd")
         self.assertEqual((result.device_count, result.st_vendor_count), (1, 1))
+
+    def test_missing_id_at_recognized_address_rejected(self):
+        with self.assertRaisesRegex(ValueError, "malformed USB identity"):
+            summarize_lsusb("Bus 001 Device 003: Product description only")
+
+    def test_invalid_hex_at_recognized_address_rejected(self):
+        with self.assertRaises(ValueError):
+            summarize_lsusb("Bus 001 Device 003: ID 0483:ZZZZ")
+
+    def test_mixed_valid_and_malformed_address_rejected(self):
+        with self.assertRaises(ValueError):
+            summarize_lsusb("Bus 001 Device 002: ID 2109:3431\nBus 001 Device 003: ID missing")
 
     def test_no_usb_commands(self):
         self.assertFalse(hasattr(__import__(__name__), "scan_hardware"))
