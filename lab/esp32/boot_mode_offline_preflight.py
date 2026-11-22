@@ -15,6 +15,8 @@ def validate(plan):
         errors.append("only owner-operated USB-UART plans are accepted")
     if plan.get("logic_voltage_v") != 3.3 or type(plan.get("logic_voltage_v")) not in (float, int):
         errors.append("logic voltage must be numeric 3.3V")
+    if type(plan.get("uart_adapter_io_voltage_v")) not in (float, int) or plan.get("uart_adapter_io_voltage_v") != 3.3:
+        errors.append("USB-UART adapter TX/RX logic must be explicitly verified as 3.3V (not 5V)")
     if plan.get("common_ground_verified") is not True:
         errors.append("common ground must be explicitly verified")
     if plan.get("tx_rx_crossed_verified") is not True:
@@ -41,20 +43,22 @@ def main(argv=None):
     parser.add_argument("--self-test", action="store_true")
     args = parser.parse_args(argv)
     sample = dict(board="esp32-wroom-32", transport="usb-uart-owner-operated",
-                  logic_voltage_v=3.3, common_ground_verified=True,
+                  logic_voltage_v=3.3, uart_adapter_io_voltage_v=3.3, common_ground_verified=True,
                   tx_rx_crossed_verified=True, power_source_verified=True,
                   gpio0_at_reset="low", en_sequence=["low", "high"],
                   gpio0_after_reset="released", flash_requested=False,
                   remote_control=False)
     if args.self_test:
         assert validate(sample) == []
-        for change in ({"logic_voltage_v": 5}, {"gpio0_at_reset": "high"},
+        for change in ({"logic_voltage_v": 5}, {"uart_adapter_io_voltage_v": 5},
+                       {"uart_adapter_io_voltage_v": True}, {"gpio0_at_reset": "high"},
                        {"en_sequence": ["high", "low"]}, {"flash_requested": True},
                        {"common_ground_verified": False}, {"remote_control": True},
                        {"transport": "network"}, {"board": "esp32-s2"}):
             assert validate({**sample, **change}), change
         assert validate([]) and validate({})
-        print("PASS: 10 offline synthetic scenarios; no device access")
+        assert validate({k: v for k, v in sample.items() if k != "uart_adapter_io_voltage_v"})
+        print("PASS: 13 offline synthetic scenarios; no device access")
         return 0
     if not args.plan:
         parser.error("provide a local JSON file or --self-test")
