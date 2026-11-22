@@ -1,0 +1,28 @@
+name: Pi offline monitor frame tests
+
+on:
+  pull_request:
+    paths:
+      - 'pi_tools/pi_health_snapshot_offline.py'
+      - 'pi_tools/pi_monitor_frame_offline.py'
+      - '.github/workflows/pi-monitor-frame.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Compile isolated Pi modules
+        run: python3 -m py_compile pi_tools/pi_health_snapshot_offline.py pi_tools/pi_monitor_frame_offline.py
+      - name: Run offline synthetic tests
+        env:
+          PYTHONPATH: pi_tools
+        run: |
+          python3 -m unittest -v pi_health_snapshot_offline pi_monitor_frame_offline
