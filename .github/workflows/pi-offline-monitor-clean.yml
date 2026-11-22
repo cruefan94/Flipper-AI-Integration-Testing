@@ -1,0 +1,24 @@
+name: Pi offline monitor isolated tests
+on:
+  pull_request:
+    paths:
+      - 'pi_lab/offline_monitor_snapshot.py'
+      - '.github/workflows/pi-offline-monitor-clean.yml'
+  push:
+    branches:
+      - 'pi/clean-offline-monitor-20261121-2208'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline-monitor:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Compile and run offline monitor unit tests
+        run: |
+          python3 -m py_compile pi_lab/offline_monitor_snapshot.py
+          python3 -m unittest discover -s pi_lab -p 'offline_monitor_snapshot.py' -v
