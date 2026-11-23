@@ -1,0 +1,27 @@
+name: Pi ESP32 serial identity offline tests
+on:
+  pull_request:
+    paths:
+      - 'lab/pi_serial_identity_crosscheck.py'
+      - 'lab/test_pi_serial_identity_crosscheck.py'
+      - '.github/workflows/pi-esp32-serial-identity-offline.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile validator and regression suite
+        run: python -m py_compile lab/pi_serial_identity_crosscheck.py lab/test_pi_serial_identity_crosscheck.py
+      - name: Run validator embedded offline tests
+        run: python lab/pi_serial_identity_crosscheck.py --self-test
+      - name: Run isolated serial identity contract tests
+        run: python -m unittest discover -s lab -p 'test_pi_serial_identity_crosscheck.py' -v
