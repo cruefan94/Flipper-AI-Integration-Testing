@@ -35,7 +35,7 @@ class Tests(unittest.TestCase):
         with self.assertRaises(ValueError):
             summarize("x" * 16385)
     def test_three_column_systemctl_format(self):
-        self.assertIn("pironman.service: enabled", summarize("UNIT FILE STATE PRESET\\npironman.service enabled enabled"))
+        self.assertIn("pironman.service: enabled", summarize("UNIT FILE STATE PRESET\npironman.service enabled enabled"))
     def test_three_column_masked(self):
         self.assertIn("pironman-oled.service: masked", summarize("pironman-oled.service masked -"))
     def test_reject_malformed_known_line(self):
