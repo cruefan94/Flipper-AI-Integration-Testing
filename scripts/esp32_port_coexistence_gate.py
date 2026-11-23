@@ -13,7 +13,7 @@ def inspect_port_plan(devices):
     errors = []
     if not isinstance(devices, list) or not (1 <= len(devices) <= 16):
         return {"valid": False, "flash_authorized": False, "errors": ["device_list"]}
-    seen_ports, seen_ids = set(), set()
+    seen_ports, seen_ids, seen_hosts = set(), set(), set()
     for idx, device in enumerate(devices):
         prefix = f"device_{idx}"
         if not isinstance(device, dict):
@@ -40,13 +40,17 @@ def inspect_port_plan(devices):
             # Canonicalize Linux port numbers; reject leading-zero aliases.
             # No device is opened, reset, or probed.
             if LINUX_PORT.fullmatch(port):
+                seen_hosts.add("linux")
                 family, number = re.fullmatch(r"(/dev/tty(?:USB|ACM))([0-9]+)", port).groups()
                 if len(number) > 1 and number.startswith("0"):
                     errors.append(prefix + "_port")
                 key = (family, int(number))
             else:
+                seen_hosts.add("windows")
                 key = ("COM", int(port[3:]))
             if key in seen_ports:
                 errors.append(prefix + "_duplicate_port")
             seen_ports.add(key)
+    if len(seen_hosts) > 1:
+        errors.append("mixed_host_port_families")
     return {"valid": not errors, "flash_authorized": False, "errors": errors}
