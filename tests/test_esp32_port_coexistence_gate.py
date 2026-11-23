@@ -46,5 +46,16 @@ class CoexistenceTests(unittest.TestCase):
                 self.assertFalse(result["valid"])
                 self.assertFalse(result["flash_authorized"])
 
+    def test_linux_usb_leading_zero_rejected(self):
+        self.assertIn("device_0_port", inspect_port_plan([board(port="/dev/ttyUSB00")])["errors"])
+    def test_linux_acm_leading_zero_rejected(self):
+        self.assertIn("device_0_port", inspect_port_plan([board(port="/dev/ttyACM01")])["errors"])
+    def test_standard_linux_ports_allowed(self):
+        self.assertTrue(inspect_port_plan([board(), board("S2", "esp32-s2", "/dev/ttyACM1")])["valid"])
+    def test_oversized_port_rejected(self):
+        self.assertFalse(inspect_port_plan([board(port="/dev/ttyUSB" + "9" * 100)])["valid"])
+    def test_no_flash_authorization_after_valid_canonical_port(self):
+        self.assertFalse(inspect_port_plan([board()])["flash_authorized"])
+
 if __name__ == "__main__":
     unittest.main()

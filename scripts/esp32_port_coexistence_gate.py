@@ -34,10 +34,18 @@ def inspect_port_plan(devices):
             errors.append(prefix + "_chip")
         if type(verified) is not bool or not verified:
             errors.append(prefix + "_identity_unverified")
-        if not isinstance(port, str) or not (LINUX_PORT.fullmatch(port) or WINDOWS_PORT.fullmatch(port)):
+        if not isinstance(port, str) or len(port) > 32 or not (LINUX_PORT.fullmatch(port) or WINDOWS_PORT.fullmatch(port)):
             errors.append(prefix + "_port")
         else:
-            key = port.upper() if WINDOWS_PORT.fullmatch(port) else port
+            # Canonicalize Linux port numbers; reject leading-zero aliases.
+            # No device is opened, reset, or probed.
+            if LINUX_PORT.fullmatch(port):
+                family, number = re.fullmatch(r"(/dev/tty(?:USB|ACM))([0-9]+)", port).groups()
+                if len(number) > 1 and number.startswith("0"):
+                    errors.append(prefix + "_port")
+                key = (family, int(number))
+            else:
+                key = ("COM", int(port[3:]))
             if key in seen_ports:
                 errors.append(prefix + "_duplicate_port")
             seen_ports.add(key)
