@@ -6,7 +6,7 @@ import unittest
 
 CHIPS = {"esp32-wroom-32", "esp32-s2"}
 BOOT = re.compile(r"boot:0x([0-9a-fA-F]{1,2})\b")
-DOWNLOAD = re.compile(r"\b(?:DOWNLOAD_BOOT|DOWNLOAD\(USB/UART0\)|waiting for download)\b", re.I)
+DOWNLOAD = re.compile(r"(?<![A-Za-z0-9_])(?:DOWNLOAD_BOOT\b|DOWNLOAD\(USB/UART0\)(?![A-Za-z0-9_])|waiting for download\b)", re.I)
 
 def classify(record):
     """Classify operator-supplied text; never issue flash/reset commands."""
@@ -37,6 +37,13 @@ class Tests(unittest.TestCase):
             self.assertEqual(classify(record)["action"], "NONE")
     def test_bounded(self):
         self.assertEqual(classify({"chip": "esp32-s2", "observation": "x" * 4097})["status"], "INVALID")
+
+    def test_usb_uart_parenthesized_token(self):
+        self.assertEqual(classify({"chip": "esp32-s2", "observation": "mode: DOWNLOAD(USB/UART0)"})["status"], "DOWNLOAD_MODE_INDICATED")
+    def test_reject_embedded_mode_token(self):
+        self.assertEqual(classify({"chip": "esp32-s2", "observation": "NOT_DOWNLOAD(USB/UART0)ISH"})["status"], "INCONCLUSIVE")
+    def test_download_boot_token(self):
+        self.assertEqual(classify({"chip": "esp32-wroom-32", "observation": "boot:0x3 (DOWNLOAD_BOOT)"})["status"], "DOWNLOAD_MODE_INDICATED")
 
 def main():
     p = argparse.ArgumentParser(description="Offline ESP32 ROM log classifier (never flashes)")
