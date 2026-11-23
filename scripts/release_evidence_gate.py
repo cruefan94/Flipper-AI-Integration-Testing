@@ -24,7 +24,7 @@ def validate_candidate(record):
         blockers.append("exact source SHA missing")
     if not SHA256.fullmatch(str(record.get("artifact_sha256", ""))):
         blockers.append("artifact SHA-256 missing")
-    if not record.get("build_run_url", "").startswith("https://github.com/"):
+    if not str(record.get("build_run_url") or "").startswith("https://github.com/"):
         blockers.append("build run link missing")
     jobs = record.get("required_jobs")
     if not isinstance(jobs, dict) or not jobs or any(v != "success" for v in jobs.values()):
