@@ -1,0 +1,30 @@
+name: Pi Pironman settings preview (offline)
+on:
+  push:
+    branches:
+      - pi/pironman-settings-preview-20261122-2208
+    paths:
+      - 'pi_tools/pironman_settings_preview_offline.py'
+      - '.github/workflows/pi-pironman-preview.yml'
+  pull_request:
+    branches:
+      - pi/monitor-health-contract-fix-20261122-2110
+    paths:
+      - 'pi_tools/pironman_settings_preview_offline.py'
+      - '.github/workflows/pi-pironman-preview.yml'
+permissions:
+  contents: read
+jobs:
+  offline:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: |
+          python -m py_compile pi_tools/pironman_settings_preview_offline.py
+          python pi_tools/pironman_settings_preview_offline.py -v
