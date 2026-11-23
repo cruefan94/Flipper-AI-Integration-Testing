@@ -7,7 +7,7 @@ from dataclasses import dataclass
 import re
 
 _ALLOWED = {"active", "inactive", "failed", "unknown"}
-_NAME = re.compile(r"^[a-zA-Z0-9_.@-]{1,100}\\.service$")
+_NAME = re.compile(r"^[a-zA-Z0-9_.@-]{1,100}\.service$")
 _MAX_LINES = 128
 _MAX_BYTES = 16384
 
