@@ -1,0 +1,26 @@
+name: Pi monitor dashboard offline tests
+on:
+  pull_request:
+    paths:
+      - 'pi_lab/read_only_monitor.py'
+      - 'pi_lab/monitor_dashboard.py'
+      - 'pi_lab/test_monitor_dashboard.py'
+      - '.github/workflows/pi-monitor-dashboard-offline.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-dashboard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Syntax and offline monitor regression
+        run: |
+          python -m py_compile pi_lab/read_only_monitor.py pi_lab/monitor_dashboard.py pi_lab/test_monitor_dashboard.py
+          python -m unittest pi_lab.test_read_only_monitor pi_lab.test_monitor_dashboard -v

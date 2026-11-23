@@ -1,0 +1,27 @@
+name: Pi offline monitor text view tests
+on:
+  pull_request:
+    paths:
+      - 'pi_lab/read_only_monitor.py'
+      - 'pi_lab/monitor_dashboard.py'
+      - 'pi_lab/monitor_text_view.py'
+      - 'pi_lab/test_monitor_text_view.py'
+      - '.github/workflows/pi-monitor-text-view-offline.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-text-view:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Syntax and regression
+        run: |
+          python -m py_compile pi_lab/read_only_monitor.py pi_lab/monitor_dashboard.py pi_lab/monitor_text_view.py pi_lab/test_monitor_text_view.py
+          python -m unittest pi_lab.test_read_only_monitor pi_lab.test_monitor_dashboard pi_lab.test_monitor_text_view -v

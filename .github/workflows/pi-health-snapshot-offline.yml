@@ -1,0 +1,25 @@
+name: Pi offline health snapshot tests
+
+on:
+  push:
+    branches:
+      - 'pi/health-snapshot-ci-*'
+  pull_request:
+    paths:
+      - 'pi_tools/pi_health_snapshot_offline.py'
+      - '.github/workflows/pi-health-snapshot-offline.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-health:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Python syntax check
+        run: python3 -m py_compile pi_tools/pi_health_snapshot_offline.py
+      - name: Offline synthetic health tests
+        run: python3 pi_tools/pi_health_snapshot_offline.py -v

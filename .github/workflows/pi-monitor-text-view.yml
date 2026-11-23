@@ -1,0 +1,23 @@
+name: Pi offline monitor text view tests
+on:
+  pull_request:
+    paths:
+      - 'pi_tools/pi_monitor_text_view_offline.py'
+      - 'pi_tools/pi_monitor_frame_offline.py'
+      - 'pi_tools/pi_health_snapshot_offline.py'
+      - '.github/workflows/pi-monitor-text-view.yml'
+  workflow_dispatch:
+jobs:
+  offline-text-view:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Syntax and synthetic tests (no device access)
+        run: |
+          python -m py_compile pi_tools/pi_health_snapshot_offline.py pi_tools/pi_monitor_frame_offline.py pi_tools/pi_monitor_text_view_offline.py
+          python pi_tools/pi_monitor_text_view_offline.py

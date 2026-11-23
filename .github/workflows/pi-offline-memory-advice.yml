@@ -1,0 +1,25 @@
+name: Pi offline memory advice regression
+on:
+  pull_request:
+    paths:
+      - 'pi_lab/offline_memory_advice.py'
+      - 'pi_lab/offline_memory_health.py'
+      - '.github/workflows/pi-offline-memory-advice.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline-memory-advice:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Pure synthetic tests only
+        run: |
+          python -m py_compile pi_lab/offline_memory_health.py pi_lab/offline_memory_advice.py
+          python -m unittest pi_lab.offline_memory_advice -v
