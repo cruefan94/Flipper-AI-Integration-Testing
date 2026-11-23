@@ -68,5 +68,21 @@ class CoexistenceTests(unittest.TestCase):
     def test_same_host_windows_allowed(self):
         self.assertTrue(inspect_port_plan([board(port="COM3"), board("S2", "esp32-s2", "COM4")])["valid"])
 
+    def test_windows_com_leading_zero_rejected(self):
+        result = inspect_port_plan([board(port="COM03")])
+        self.assertIn("device_0_port", result["errors"])
+        self.assertFalse(result["flash_authorized"])
+
+    def test_windows_com_canonical_case_insensitive(self):
+        result = inspect_port_plan([board(port="com3"), board("S2", "esp32-s2", "COM4")])
+        self.assertTrue(result["valid"])
+        self.assertFalse(result["flash_authorized"])
+
+    def test_windows_com_alias_cannot_be_used_as_second_board(self):
+        result = inspect_port_plan([board(port="COM3"), board("S2", "esp32-s2", "COM03")])
+        self.assertIn("device_1_port", result["errors"])
+        self.assertIn("device_1_duplicate_port", result["errors"])
+        self.assertFalse(result["flash_authorized"])
+
 if __name__ == "__main__":
     unittest.main()
