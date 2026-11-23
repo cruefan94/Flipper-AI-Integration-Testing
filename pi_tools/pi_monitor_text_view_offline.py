@@ -8,7 +8,7 @@ import unittest
 from pi_monitor_frame_offline import MonitorFrame, assemble_frame
 
 ALLOWED_STATES = frozenset(("UNKNOWN", "CONNECTED", "DISCONNECTED", "STALE"))
-ALLOWED_HEALTH = frozenset(("OK", "LOW_MEMORY", "HIGH_LOAD", "LOW_MEMORY_HIGH_LOAD"))
+ALLOWED_HEALTH = frozenset(("OBSERVED_NOT_DIAGNOSED", "LOW_AVAILABLE_MEMORY"))
 # Restrict to the exact upstream health vocabulary; never render arbitrary labels.
 
 
@@ -87,6 +87,13 @@ class TextViewTests(unittest.TestCase):
         for status in ("SECRET", "DEVICE_SERIAL", "OK\\nprivate", "", 1, None):
             with self.subTest(status=status), self.assertRaises(ValueError):
                 render_frame(replace(self.frame(), health_status=status))
+
+    def test_upstream_health_contract(self):
+        from pi_health_snapshot_offline import summarize_health
+        self.assertEqual(ALLOWED_HEALTH, frozenset((
+            summarize_health(self.MEM, self.LOAD).status,
+            summarize_health("MemTotal: 4000000 kB\nMemAvailable: 100000 kB", self.LOAD).status,
+        )))
 
     def test_accept_all_known_health_labels(self):
         from dataclasses import replace
