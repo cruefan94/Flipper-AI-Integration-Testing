@@ -10,7 +10,7 @@ class UsbSummaryTests(unittest.TestCase):
         self.assertIn("unverified", result.conclusion)
 
     def test_deduplicated_vid_pid(self):
-        devices = parse_lsusb("Bus 002 Device 004: ID 1234:abcd private-description\\nBus 001 Device 002: ID 1234:abcd other")
+        devices = parse_lsusb("Bus 002 Device 004: ID 1234:abcd private-description\nBus 001 Device 002: ID 1234:abcd other")
         result = summarize_usb(devices)
         self.assertEqual((result.device_count, result.unique_vid_pid_count), (2, 1))
         self.assertEqual(result.entries[0], "Bus 001 Device 002: 1234:abcd")
