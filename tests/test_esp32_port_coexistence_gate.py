@@ -57,5 +57,16 @@ class CoexistenceTests(unittest.TestCase):
     def test_no_flash_authorization_after_valid_canonical_port(self):
         self.assertFalse(inspect_port_plan([board()])["flash_authorized"])
 
+    def test_mixed_host_ports_rejected(self):
+        result = inspect_port_plan([board(), board("S2", "esp32-s2", "COM4")])
+        self.assertIn("mixed_host_port_families", result["errors"])
+        self.assertFalse(result["flash_authorized"])
+
+    def test_same_host_linux_allowed(self):
+        self.assertTrue(inspect_port_plan([board(), board("S2", "esp32-s2", "/dev/ttyACM1")])["valid"])
+
+    def test_same_host_windows_allowed(self):
+        self.assertTrue(inspect_port_plan([board(port="COM3"), board("S2", "esp32-s2", "COM4")])["valid"])
+
 if __name__ == "__main__":
     unittest.main()
