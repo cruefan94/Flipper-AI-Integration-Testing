@@ -4,6 +4,7 @@ No GPIO, serial, network, or flashing operations. Input is operator-authored JSO
 Passing checks do not authorize physical connection or power-up.
 """
 import json
+import math
 import sys
 import unittest
 
@@ -38,7 +39,7 @@ def validate(plan):
             continue
         if not isinstance(signal, str) or signal not in SIGNALS:
             errors.append(prefix + ": unknown signal")
-        if type(volts) not in (int, float) or not 0 <= volts <= 5.0:
+        if type(volts) not in (int, float) or not math.isfinite(volts) or not 0 <= volts <= 5.0:
             errors.append(prefix + ": invalid voltage")
             continue
         if type(shift) is not bool or type(ground) is not bool:
@@ -97,6 +98,12 @@ class Tests(unittest.TestCase):
     def test_bool_voltage(self):
         self.module["logic_voltage"] = True
         self.assertTrue(validate({"modules": [self.module]}))
+
+    def test_nonfinite_voltage_rejected(self):
+        for voltage in (float("nan"), float("inf"), float("-inf")):
+            with self.subTest(voltage=voltage):
+                self.module["logic_voltage"] = voltage
+                self.assertIn("0: invalid voltage", validate({"modules": [self.module]}))
 
     def test_invalid_fields(self):
         self.module["pin"] = "D1"
