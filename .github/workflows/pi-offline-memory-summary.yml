@@ -23,4 +23,4 @@ jobs:
       - name: Offline synthetic regression tests
         run: |
           python -m py_compile pi_lab/offline_memory_health.py pi_lab/offline_memory_advice.py pi_lab/offline_memory_summary.py
-          python -m unittest pi_lab.offline_memory_advice pi_lab.offline_memory_summary -v
+          python -m unittest pi_lab.offline_memory_health pi_lab.offline_memory_advice pi_lab.offline_memory_summary -v
