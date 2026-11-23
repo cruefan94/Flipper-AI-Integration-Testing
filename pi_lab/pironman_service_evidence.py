@@ -3,7 +3,7 @@ import re
 import unittest
 
 KNOWN = ("pironman.service", "pironman5.service", "pironman-oled.service")
-LINE = re.compile(r"^([a-zA-Z0-9_.@-]{1,80}\.service)\s+(enabled|disabled|static|masked|generated|indirect)$")
+LINE = re.compile(r"^([a-zA-Z0-9_.@-]{1,80}\.service)\s+(enabled|disabled|static|masked|generated|indirect)(?:\s+(?:enabled|disabled|static|masked|-))?$")
 
 def summarize(evidence: str) -> tuple[str, ...]:
     if type(evidence) is not str or len(evidence) > 16384:
@@ -15,7 +15,7 @@ def summarize(evidence: str) -> tuple[str, ...]:
         if any(stripped.startswith(unit + " ") or stripped == unit for unit in KNOWN) and not match:
             raise ValueError("malformed known unit")
         if match and match.group(1) in KNOWN:
-            unit, state = match.groups()
+            unit, state = match.group(1, 2)
             if unit in found:
                 raise ValueError("duplicate unit")
             found[unit] = state
