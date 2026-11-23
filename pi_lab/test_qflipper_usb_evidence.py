@@ -3,6 +3,17 @@ from pi_lab.qflipper_usb_evidence import parse_lsusb, matches_vid_pid
 
 
 class UsbEvidenceTests(unittest.TestCase):
+    def test_normal_lsusb_description(self):
+        devices = parse_lsusb("Bus 002 Device 005: ID 0483:5740 STMicroelectronics Device")
+        self.assertEqual((devices[0].bus, devices[0].device), ("002", "005"))
+
+    def test_without_description(self):
+        self.assertEqual(len(parse_lsusb("Bus 002 Device 005: ID 0483:5740")), 1)
+
+    def test_reject_literal_backslash_s(self):
+        with self.assertRaises(ValueError):
+            parse_lsusb(r"Bus 002 Device 005: ID 0483:5740\sSpoof")
+
     def test_empty(self):
         self.assertEqual(parse_lsusb(""), ())
 
