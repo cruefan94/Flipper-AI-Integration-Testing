@@ -3,6 +3,7 @@ on:
   pull_request:
     paths:
       - 'pi_tools/pironman_service_evidence_offline.py'
+      - 'pi_lab/pironman_service_evidence.py'
       - 'tests/test_pironman_service_evidence_offline.py'
       - '.github/workflows/pi-pironman-service-evidence.yml'
   workflow_dispatch:
@@ -21,3 +22,7 @@ jobs:
         run: python -m py_compile pi_tools/pironman_service_evidence_offline.py tests/test_pironman_service_evidence_offline.py
       - name: Run synthetic offline regression tests
         run: python -m unittest discover -s tests -p 'test_pironman_service_evidence_offline.py' -v
+      - name: Test additional fixed-label unit evidence classifier
+        run: |
+          python -m py_compile pi_lab/pironman_service_evidence.py
+          python -m unittest pi_lab.pironman_service_evidence -v
