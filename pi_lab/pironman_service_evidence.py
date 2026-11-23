@@ -11,6 +11,9 @@ def summarize(evidence: str) -> tuple[str, ...]:
     found = {}
     for line in evidence.splitlines():
         match = LINE.fullmatch(line.strip())
+        stripped = line.strip()
+        if any(stripped.startswith(unit + " ") or stripped == unit for unit in KNOWN) and not match:
+            raise ValueError("malformed known unit")
         if match and match.group(1) in KNOWN:
             unit, state = match.groups()
             if unit in found:
@@ -31,6 +34,13 @@ class Tests(unittest.TestCase):
     def test_bound(self):
         with self.assertRaises(ValueError):
             summarize("x" * 16385)
+    def test_three_column_systemctl_format(self):
+        self.assertIn("pironman.service: enabled", summarize("UNIT FILE STATE PRESET\\npironman.service enabled enabled"))
+    def test_three_column_masked(self):
+        self.assertIn("pironman-oled.service: masked", summarize("pironman-oled.service masked -"))
+    def test_reject_malformed_known_line(self):
+        with self.assertRaises(ValueError):
+            summarize("pironman.service running enabled")
     def test_no_running_claim(self):
         self.assertNotIn("running", " ".join(summarize("pironman.service enabled")))
 
