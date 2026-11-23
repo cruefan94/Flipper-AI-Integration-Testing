@@ -1,0 +1,22 @@
+name: Pi Pironman offline capability gate
+on:
+  pull_request:
+    paths:
+      - 'pi_tools/pironman_capability_gate_offline.py'
+      - '.github/workflows/pi-pironman-capability-gate.yml'
+  workflow_dispatch:
+jobs:
+  offline-capability-gate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Check syntax without executing hardware operations
+        run: python -m py_compile pi_tools/pironman_capability_gate_offline.py
+      - name: Run eight offline synthetic capability tests
+        run: python pi_tools/pironman_capability_gate_offline.py
