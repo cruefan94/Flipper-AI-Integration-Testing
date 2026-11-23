@@ -37,7 +37,7 @@ def render_summary(summary: MemorySummary) -> str:
         raise ValueError("invalid summary")
     # Fixed text is generated in summarize_meminfo; never render caller-forged fields.
     import re
-    match = re.fullmatch(r"Available: ([0-9]{1,3})% \\(([0-9]{1,10}) / ([0-9]{1,10}) KiB\\)", summary.capacity)
+    match = re.fullmatch(r"Available: ([0-9]{1,3})% \(([0-9]{1,10}) / ([0-9]{1,10}) KiB\)", summary.capacity)
     if match is None:
         raise ValueError("invalid capacity")
     percent, available, total = map(int, match.groups())
