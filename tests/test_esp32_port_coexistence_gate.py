@@ -33,5 +33,18 @@ class CoexistenceTests(unittest.TestCase):
     def test_no_authorization_on_invalid(self):
         self.assertFalse(inspect_port_plan([board(verified=False)])["flash_authorized"])
 
+    def test_blank_label(self):
+        self.assertIn("device_0_label", inspect_port_plan([board(label="   ")])["errors"])
+    def test_linux_port_case_sensitive(self):
+        self.assertIn("device_0_port", inspect_port_plan([board(port="/dev/ttyusb0")])["errors"])
+    def test_windows_port_lowercase_allowed(self):
+        self.assertTrue(inspect_port_plan([board(port="com12")])["valid"])
+    def test_fail_closed_all_cases(self):
+        for port in ("/dev/ttyusb0", "COM0", "COM4;echo", "/dev/ttyUSB0\\n"):
+            with self.subTest(port=port):
+                result = inspect_port_plan([board(port=port)])
+                self.assertFalse(result["valid"])
+                self.assertFalse(result["flash_authorized"])
+
 if __name__ == "__main__":
     unittest.main()
