@@ -7,7 +7,7 @@ connectivity, RPC functionality, backups, or firmware compatibility.
 import re
 from dataclasses import dataclass
 
-LINE = re.compile(r"^Bus ([0-9]{3}) Device ([0-9]{3}): ID ([0-9a-fA-F]{4}):([0-9a-fA-F]{4})(?:\\s+.*)?$")
+LINE = re.compile(r"^Bus ([0-9]{3}) Device ([0-9]{3}): ID ([0-9a-fA-F]{4}):([0-9a-fA-F]{4})(?:\s+.*)?$")
 MAX_BYTES = 32768
 MAX_LINES = 256
 
