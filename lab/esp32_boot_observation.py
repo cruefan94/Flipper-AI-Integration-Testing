@@ -17,17 +17,20 @@ def classify(record):
     if not isinstance(steps, list) or len(steps) != 3:
         raise ValueError("Exactly three manually observed steps required")
     expected = [("pressed", "released"), ("pressed", "pressed"), ("released", "pressed")]
+    sequence_matches = True
     for step, (boot, en) in zip(steps, expected):
         if not isinstance(step, dict) or set(step) != {"boot", "en"}:
             raise ValueError("Each step must contain only boot and en")
         if any(type(step[k]) is not str or step[k] not in STATES for k in ("boot", "en")):
             raise ValueError("Invalid switch state")
         if (step["boot"], step["en"]) != (boot, en):
-            return {"status": "INCONCLUSIVE", "reason": "sequence_not_observed",
-                    "flash_authorized": False}
+            sequence_matches = False
     outcome = record["observed"]
     if type(outcome) is not str or outcome not in OUTCOMES:
         raise ValueError("Invalid observation")
+    if not sequence_matches:
+        return {"status": "INCONCLUSIVE", "reason": "sequence_not_observed",
+                "flash_authorized": False}
     if outcome == "rom_download_banner":
         return {"status": "OBSERVED_ROM_BANNER_ONLY", "reason": "manual_evidence_unverified",
                 "flash_authorized": False}
@@ -59,6 +62,25 @@ class OfflineTests(unittest.TestCase):
         f = self.fixture()
         f["steps"][0]["en"] = "unknown"
         self.assertEqual(classify(f)["status"], "INCONCLUSIVE")
+
+    def test_late_invalid_step_rejected_even_after_sequence_mismatch(self):
+        f = self.fixture()
+        f["steps"][0]["boot"] = "released"
+        f["steps"][2]["en"] = []
+        with self.assertRaises(ValueError): classify(f)
+
+    def test_invalid_observation_rejected_even_after_sequence_mismatch(self):
+        f = self.fixture()
+        f["steps"][0]["boot"] = "released"
+        f["observed"] = {"private": "data"}
+        with self.assertRaises(ValueError): classify(f)
+
+    def test_valid_mismatch_still_inconclusive_and_not_authorized(self):
+        f = self.fixture()
+        f["steps"][0]["boot"] = "released"
+        result = classify(f)
+        self.assertEqual(result["reason"], "sequence_not_observed")
+        self.assertIs(result["flash_authorized"], False)
 
     def test_wrong_board_rejected(self):
         f = self.fixture()
