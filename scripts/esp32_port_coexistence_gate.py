@@ -5,7 +5,7 @@ opens serial devices, or authorizes programming. Synthetic public fixtures only.
 """
 import re
 
-PORT = re.compile(r"(?:/dev/tty(?:USB|ACM)[0-9]+|COM[1-9][0-9]*)\\Z", re.I)
+PORT = re.compile(r"(?:/dev/tty(?:USB|ACM)[0-9]+|COM[1-9][0-9]*)\Z", re.I)
 CHIPS = frozenset(("esp32-wroom-32", "esp32-s2"))
 
 def inspect_port_plan(devices):
