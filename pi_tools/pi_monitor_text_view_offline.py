@@ -3,14 +3,13 @@
 No polling, subprocesses, hardware access, network, or device writes.
 Input must be an exact MonitorFrame from the validated offline model.
 """
-from dataclasses import fields
 import unittest
 
 from pi_monitor_frame_offline import MonitorFrame, assemble_frame
 
 ALLOWED_STATES = frozenset(("UNKNOWN", "CONNECTED", "DISCONNECTED", "STALE"))
 ALLOWED_HEALTH = frozenset(("OK", "LOW_MEMORY", "HIGH_LOAD", "LOW_MEMORY_HIGH_LOAD"))
-# The health model's own vocabulary remains authoritative; render only safe labels.
+# Restrict to the exact upstream health vocabulary; never render arbitrary labels.
 
 
 def render_frame(frame):
@@ -31,7 +30,7 @@ def render_frame(frame):
         raise ValueError("invalid available memory")
     if type(frame.load_1m) is not float or not 0 <= frame.load_1m <= 100000:
         raise ValueError("invalid load")
-    if type(frame.health_status) is not str or not frame.health_status.isupper() or not frame.health_status.replace("_", "").isalpha() or len(frame.health_status) > 40:
+    if type(frame.health_status) is not str or frame.health_status not in ALLOWED_HEALTH:
         raise ValueError("invalid health status")
     return ("PI MONITOR (OFFLINE SNAPSHOT)\n"
             f"Memory used: {frame.memory_used_percent}%\n"
@@ -82,6 +81,18 @@ class TextViewTests(unittest.TestCase):
         from dataclasses import replace
         with self.assertRaises(ValueError):
             render_frame(replace(self.frame(age_seconds=11), oled="CONNECTED"))
+
+    def test_reject_unknown_health_status(self):
+        from dataclasses import replace
+        for status in ("SECRET", "DEVICE_SERIAL", "OK\\nprivate", "", 1, None):
+            with self.subTest(status=status), self.assertRaises(ValueError):
+                render_frame(replace(self.frame(), health_status=status))
+
+    def test_accept_all_known_health_labels(self):
+        from dataclasses import replace
+        for status in ALLOWED_HEALTH:
+            with self.subTest(status=status):
+                self.assertIn(f"Health: {status}", render_frame(replace(self.frame(), health_status=status)))
 
     def test_reject_invalid_metrics(self):
         from dataclasses import replace
