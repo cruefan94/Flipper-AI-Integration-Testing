@@ -1,0 +1,26 @@
+name: Pi offline memory summary regression
+on:
+  pull_request:
+    paths:
+      - 'pi_lab/offline_memory_summary.py'
+      - 'pi_lab/offline_memory_advice.py'
+      - 'pi_lab/offline_memory_health.py'
+      - '.github/workflows/pi-offline-memory-summary.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline-memory-summary:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Offline synthetic regression tests
+        run: |
+          python -m py_compile pi_lab/offline_memory_health.py pi_lab/offline_memory_advice.py pi_lab/offline_memory_summary.py
+          python -m unittest pi_lab.offline_memory_advice pi_lab.offline_memory_summary -v
