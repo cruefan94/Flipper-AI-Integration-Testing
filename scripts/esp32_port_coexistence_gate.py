@@ -47,7 +47,7 @@ def inspect_port_plan(devices):
                 key = (family, int(number))
             else:
                 seen_hosts.add("windows")
-                key = ("COM", int(port[3:]))
+                # Reject leading-zero COM aliases (COM03) and keep canonical COM3.\n                # Port names remain case-insensitive, as on Windows.\n                number = port[3:]\n                if len(number) > 1 and number.startswith("0"):\n                    errors.append(prefix + "_port")\n                key = ("COM", int(number))
             if key in seen_ports:
                 errors.append(prefix + "_duplicate_port")
             seen_ports.add(key)
