@@ -1,13 +1,7 @@
 name: Public AI1 BLE contract smoke tests
 on:
+  # Owner-reviewed manual initiation only; no unattended push/PR/schedule builds.
   workflow_dispatch:
-  push:
-    paths:
-      - 'tests/test_ai1_contract.py'
-      - 'tests/test_virtual_ai1_session.py'
-      - 'tests/virtual_ai1_session.py'
-      - 'tests/check_android_ai1_parity.py'
-      - '.github/workflows/ai1-contract.yml'
 permissions:
   contents: read
 jobs:
