@@ -1,11 +1,6 @@
 name: Public ESP32-S2 flash bundle safety
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'tests/esp32s2_bundle_preflight.py'
-      - 'tests/test_esp32s2_bundle_preflight.py'
-      - '.github/workflows/esp32s2-public-preflight.yml'
+  # Owner-reviewed manual initiation only; no unattended push/PR/schedule builds.
   workflow_dispatch:
 permissions:
   contents: read
