@@ -1,14 +1,7 @@
 name: Automatic CI failover monitor (public runner)
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/ci-failover-monitor.yml'
-      - 'scripts/ci_failover.py'
+  # Owner sign-off required before manually initiating this credit-consuming workflow.
   workflow_dispatch:
-  schedule:
-    - cron: "17,47 * * * *"
-
 permissions:
   contents: read
   actions: write
