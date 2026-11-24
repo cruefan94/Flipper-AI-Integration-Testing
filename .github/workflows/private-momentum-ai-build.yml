@@ -1,5 +1,6 @@
 name: Private Momentum AI compile on public runner
 on:
+  # Owner-reviewed manual initiation only; no unattended push/PR/schedule builds.
   workflow_call:
     secrets:
       FLIPPER_PRIVATE_SOURCE_TOKEN:
@@ -7,9 +8,6 @@ on:
       FLIPPER_ARTIFACT_PASSPHRASE:
         required: true
   workflow_dispatch:
-  push:
-    paths:
-      - '.github/workflows/private-momentum-ai-build.yml'
 permissions:
   contents: read
 jobs:
