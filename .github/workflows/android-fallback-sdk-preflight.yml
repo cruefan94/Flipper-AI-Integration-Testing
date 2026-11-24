@@ -1,10 +1,6 @@
 name: Android fallback SDK preflight (public-safe, no app build)
 on:
-  pull_request:
-    paths:
-      - ".github/workflows/ci-fallback-verify.yml"
-      - ".github/workflows/android-fallback-sdk-preflight.yml"
-      - "tests/test_android_fallback_sdk_setup.py"
+  # Owner-reviewed manual initiation only; no unattended push/PR/schedule builds.
   workflow_dispatch:
 
 permissions:
