@@ -1,8 +1,6 @@
 name: Public Flipper AI integration contract tests
 on:
-  push:
-    branches: [main, 'feature/**']
-  pull_request:
+  # Reviewed owner-approved run only; no push/PR auto-spend.
   workflow_dispatch:
 permissions:
   contents: read
