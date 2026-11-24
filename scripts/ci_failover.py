@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 import json
 import os
 import re
@@ -147,6 +148,45 @@ def recorded(key: str, runs: list[dict]) -> bool:
     return any(key in (run.get("display_title") or "") for run in runs)
 
 
+def coverage_summary(coverage: dict[str, str], dispatched: int, candidates: int) -> str:
+    """Human-visible coverage audit, not proof that any fallback job ran.
+
+    The caller controls all displayed values from fixed status labels. Never
+    write credentials, API payloads, or private source into the job summary.
+    """
+    lines = [
+        "## Flipper AI automatic CI failover coverage",
+        "",
+        "| Repository | Actions history visibility |",
+        "| --- | --- |",
+    ]
+    for repo in MONITORED:
+        state = coverage.get(repo, "NOT CHECKED")
+        lines.append(f"| `{repo}` | {state} |")
+    lines += [
+        "",
+        f"Fallbacks dispatched: **{dispatched}**; eligible candidates: **{candidates}**.",
+        "**Private fallback NOT fully operational**" if any(
+            coverage.get(repo) != "ACCESSIBLE" for repo in MONITORED
+        ) else "**Monitored Actions histories accessible** (does not prove a fallback was triggered).",
+        "",
+        "Synthetic policy tests and a green monitor job are not proof of private Actions access.",
+    ]
+    return "\n".join(lines) + "\n"
+
+
+def write_coverage_summary(coverage: dict[str, str], dispatched: int, candidates: int):
+    """Write a sanitized Actions job summary when running on GitHub."""
+    path = os.environ.get("GITHUB_STEP_SUMMARY")
+    if not path:
+        return
+    try:
+        with Path(path).open("a", encoding="utf-8") as handle:
+            handle.write(coverage_summary(coverage, dispatched, candidates))
+    except OSError:
+        print("::warning::Could not write failover coverage job summary")
+
+
 def monitor():
     if os.environ.get("GITHUB_REPOSITORY") != TARGET:
         raise RuntimeError("Run only in the public-safe Flipper integration-testing repo")
@@ -163,17 +203,21 @@ def monitor():
     ).get("workflow_runs", [])
     now = datetime.now(timezone.utc)
     pending = []
+    coverage = {}
     for repo in MONITORED:
         token = private_token if repo == MONITORED[0] else public_token
         if not token:
+            coverage[repo] = "BLOCKED: missing Actions-read token"
             print(f"::warning::Private Actions-read token missing: cannot monitor {repo}")
             continue
         try:
             runs = api(f"/repos/{repo}/actions/runs?per_page=100", token).get("workflow_runs", [])
         except ApiError as error:
             # A token with Contents:read only cannot inspect private Actions.
+            coverage[repo] = "BLOCKED: Actions history permission or API error"
             print(f"::warning::Cannot monitor {repo}: {error}. Grant Actions:read to an Actions-read token.")
             continue
+        coverage[repo] = "ACCESSIBLE"
         for item in find_candidates(repo, runs, now):
             key = trigger_id(item)
             if recorded(key, previous):
@@ -223,6 +267,7 @@ def monitor():
         )
         sent += 1
     print(f"Failover scan complete. Dispatched {sent}; queued candidates {len(pending)}.")
+    write_coverage_summary(coverage, sent, len(pending))
     if any(c["kind"] == "diagnostic" for c in pending):
         print("::notice::Unmapped source workflows get diagnostic checks, not an equivalent build.")
 
