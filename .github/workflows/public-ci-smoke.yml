@@ -1,9 +1,7 @@
 name: Public runner and contract smoke tests
 
 on:
-  push:
-    branches: [main, "ci/**"]
-  pull_request:
+  # Owner-reviewed manual initiation only; no unattended push/PR/schedule builds.
   workflow_dispatch:
 
 permissions:
