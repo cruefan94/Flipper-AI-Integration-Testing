@@ -1,14 +1,7 @@
 name: Flipper C ↔ Android Java AI1 integration (public runner)
 on:
-  workflow_call:
-    secrets:
-      FLIPPER_PRIVATE_SOURCE_TOKEN:
-        required: true
+  # Manual only: owner approval required before spending CI minutes.
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/private-flipper-android-ai1-integration.yml'
 permissions:
   contents: read
 jobs:
