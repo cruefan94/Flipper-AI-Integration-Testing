@@ -1,15 +1,7 @@
 name: Termux bridge contract checks
 on:
-  pull_request:
-    paths:
-      - 'termux/**'
-      - '.github/workflows/termux-bridge-checks.yml'
-  push:
-    branches:
-      - main
-    paths:
-      - 'termux/**'
-      - '.github/workflows/termux-bridge-checks.yml'
+  # Manual only: owner approval required before spending CI minutes.
+  workflow_dispatch:
 jobs:
   python-static-and-contract:
     runs-on: ubuntu-latest
