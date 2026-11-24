@@ -1,12 +1,6 @@
 name: Private Momentum AI compile on public runner
 on:
-  # Owner-reviewed manual initiation only; no unattended push/PR/schedule builds.
-  workflow_call:
-    secrets:
-      FLIPPER_PRIVATE_SOURCE_TOKEN:
-        required: true
-      FLIPPER_ARTIFACT_PASSPHRASE:
-        required: true
+  # Manual only: owner approval required before spending CI minutes.
   workflow_dispatch:
 permissions:
   contents: read
