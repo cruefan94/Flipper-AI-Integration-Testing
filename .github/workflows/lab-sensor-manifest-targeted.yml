@@ -1,0 +1,21 @@
+name: Lab sensor manifest targeted tests
+on:
+  pull_request:
+    paths:
+      - 'lab/arduino_sensor_manifest_preflight.py'
+      - '.github/workflows/lab-sensor-manifest-targeted.yml'
+permissions:
+  contents: read
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Compile and run synthetic tests
+        run: |
+          python3 -m py_compile lab/arduino_sensor_manifest_preflight.py
+          python3 lab/arduino_sensor_manifest_preflight.py --self-test
