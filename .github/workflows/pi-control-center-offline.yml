@@ -1,0 +1,18 @@
+name: Pi offline control center
+on:
+  pull_request:
+    paths:
+      - 'pi_lab/**'
+      - '.github/workflows/pi-control-center-offline.yml'
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m unittest pi_lab.control_center_offline pi_lab.test_monitor_dashboard pi_lab.offline_memory_summary pi_lab.pironman_service_evidence -v
