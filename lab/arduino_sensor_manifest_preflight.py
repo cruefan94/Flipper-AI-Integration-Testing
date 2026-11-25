@@ -39,7 +39,7 @@ def validate(plan):
             continue
         if not isinstance(signal, str) or signal not in SIGNALS:
             errors.append(prefix + ": unknown signal")
-        if type(volts) not in (int, float) or not math.isfinite(volts) or not 0 <= volts <= 5.0:
+        if type(volts) not in (int, float) or not 0 <= volts <= 5.0 or not math.isfinite(volts):
             errors.append(prefix + ": invalid voltage")
             continue
         if type(shift) is not bool or type(ground) is not bool:
@@ -104,6 +104,12 @@ class Tests(unittest.TestCase):
             with self.subTest(voltage=voltage):
                 self.module["logic_voltage"] = voltage
                 self.assertIn("0: invalid voltage", validate({"modules": [self.module]}))
+
+    def test_huge_integer_voltage_rejected(self):
+        for voltage in (10**400, -(10**400)):
+            with self.subTest(sign=voltage > 0):
+                self.module['logic_voltage'] = voltage
+                self.assertIn('0: invalid voltage', validate({'modules': [self.module]}))
 
     def test_invalid_fields(self):
         self.module["pin"] = "D1"
