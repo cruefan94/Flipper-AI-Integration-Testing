@@ -15,11 +15,15 @@ MAX_JSON_BYTES = 4096
 TARGETS = frozenset(("pi", "android", "flipper", "p4", "wroom32", "uno", "termux"))
 ACTIONS = frozenset((
     "device.ping", "device.status", "device.capabilities",
-    "telemetry.read", "script.list", "script.request"
+    "telemetry.read", "script.list", "script.request",
+    "audio.play", "audio.stop", "audio.status"
 ))
+AUDIO_ACTIONS = frozenset(("audio.play", "audio.stop", "audio.status"))
+AUDIO_TARGETS = frozenset(("p4",))
 SCRIPT_TARGETS = frozenset(("pi", "termux"))
 _IDENTIFIER = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,63}$")
 _SCRIPT_ID = re.compile(r"^[a-z][a-z0-9_]{0,63}$")
+_SOUND_ID = re.compile(r"^[a-z][a-z0-9_]{0,63}$")
 
 
 class ProtocolError(ValueError):
@@ -75,7 +79,8 @@ def validate_envelope(message: Any) -> dict[str, Any]:
         raise ProtocolError("Unsupported message kind")
     if not isinstance(message["request_id"], str) or not _IDENTIFIER.fullmatch(message["request_id"]):
         raise ProtocolError("Invalid request ID")
-    if (not isinstance(message["source"], str) or not isinstance(message["target"], str)\n            or message["source"] not in TARGETS or message["target"] not in TARGETS):
+    if (not isinstance(message["source"], str) or not isinstance(message["target"], str)
+            or message["source"] not in TARGETS or message["target"] not in TARGETS):
         raise ProtocolError("Unknown source/target")
     if message["source"] == message["target"]:
         raise ProtocolError("Source and target must differ")
@@ -87,6 +92,22 @@ def validate_envelope(message: Any) -> dict[str, Any]:
     if message["kind"] == "request":
         if "status" in message:
             raise ProtocolError("Request cannot carry status")
+        if message["action"] in AUDIO_ACTIONS:
+            if message["target"] not in AUDIO_TARGETS:
+                raise ProtocolError("Audio requests must target the P4")
+            audio_args = message["args"]
+            if message["action"] == "audio.play":
+                if set(audio_args) - {"sound_id", "volume"} or "sound_id" not in audio_args:
+                    raise ProtocolError("Only a sound ID and optional volume are allowed")
+                sound_id = audio_args["sound_id"]
+                if not isinstance(sound_id, str) or not _SOUND_ID.fullmatch(sound_id):
+                    raise ProtocolError("Invalid sound ID")
+                if "volume" in audio_args:
+                    volume = audio_args["volume"]
+                    if type(volume) is not int or not (0 <= volume <= 100):
+                        raise ProtocolError("Volume must be an integer from 0 to 100")
+            elif audio_args:
+                raise ProtocolError("Audio stop/status does not accept arguments")
         if message["action"] == "script.request":
             if message["target"] not in SCRIPT_TARGETS:
                 raise ProtocolError("Script target must be Pi or Termux")
