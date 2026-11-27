@@ -61,6 +61,40 @@ class ProtocolTests(unittest.TestCase):
         with self.assertRaises(p.ProtocolError):
             p.encode_envelope(msg)
 
+    def test_audio_trigger_by_manifest_id(self):
+        msg = sample()
+        msg.update(source="flipper", target="p4", action="audio.play",
+                   args={"sound_id": "notification_1", "volume": 50})
+        self.assertEqual(p.decode_stream_frame(p.encode_stream_frame(msg)), msg)
+        for action in ("audio.stop", "audio.status"):
+            msg.update(action=action, args={})
+            self.assertEqual(p.decode_envelope(p.encode_envelope(msg)), msg)
+
+    def test_audio_rejects_unsafe_inputs(self):
+        msg = sample()
+        msg.update(target="p4", action="audio.play")
+        bad_args = (
+            {}, {"path": "/sdcard/private.wav"},
+            {"sound_id": "../secret"}, {"sound_id": "bad name"},
+            {"sound_id": "beep", "path": "/tmp/beep.wav"},
+            {"sound_id": "beep", "audio_base64": "AAA"},
+            {"sound_id": "beep", "volume": True},
+            {"sound_id": "beep", "volume": 1.5},
+            {"sound_id": "beep", "volume": -1},
+            {"sound_id": "beep", "volume": 101}
+        )
+        for args in bad_args:
+            msg["args"] = args
+            with self.subTest(args=args), self.assertRaises(p.ProtocolError):
+                p.encode_envelope(msg)
+        msg.update(args={"sound_id": "beep"}, target="android")
+        with self.assertRaises(p.ProtocolError):
+            p.encode_envelope(msg)
+        for action in ("audio.stop", "audio.status"):
+            msg.update(target="p4", action=action, args={"sound_id": "beep"})
+            with self.subTest(action=action), self.assertRaises(p.ProtocolError):
+                p.encode_envelope(msg)
+
     def test_oversized_frame(self):
         msg = sample()
         msg["args"] = {"blob": "x" * 4090}
