@@ -75,11 +75,11 @@ def validate_envelope(message: Any) -> dict[str, Any]:
         raise ProtocolError("Unsupported message kind")
     if not isinstance(message["request_id"], str) or not _IDENTIFIER.fullmatch(message["request_id"]):
         raise ProtocolError("Invalid request ID")
-    if message["source"] not in TARGETS or message["target"] not in TARGETS:
+    if (not isinstance(message["source"], str) or not isinstance(message["target"], str)\n            or message["source"] not in TARGETS or message["target"] not in TARGETS):
         raise ProtocolError("Unknown source/target")
     if message["source"] == message["target"]:
         raise ProtocolError("Source and target must differ")
-    if message["action"] not in ACTIONS:
+    if not isinstance(message["action"], str) or message["action"] not in ACTIONS:
         raise ProtocolError("Unsupported action")
     if not isinstance(message["args"], dict):
         raise ProtocolError("Args must be an object")
