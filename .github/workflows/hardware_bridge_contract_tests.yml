@@ -1,0 +1,31 @@
+name: Hardware bridge protocol contract
+
+on:
+  pull_request:
+    paths:
+      - "hardware_bridge/**"
+      - ".github/workflows/hardware_bridge_contract_tests.yml"
+  push:
+    branches:
+      - "feature/unified-hardware-bridge-p4-termux-v01-20261127"
+    paths:
+      - "hardware_bridge/**"
+      - ".github/workflows/hardware_bridge_contract_tests.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  contract-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Compile module and tests
+        run: python -m compileall -q hardware_bridge
+      - name: Run protocol unit tests
+        run: python -m unittest discover -s hardware_bridge -p 'test_*.py' -v
