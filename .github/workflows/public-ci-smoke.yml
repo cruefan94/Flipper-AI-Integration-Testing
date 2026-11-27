@@ -1,9 +1,8 @@
 name: Public runner and contract smoke tests
 
 on:
-  push:
-    branches: [main, "ci/**"]
-  pull_request:
+  # Efficiency audit P0: prevent unattended push/PR builds and surprise runner use.
+  # Owner sign-off is required before a manual dispatch.
   workflow_dispatch:
 
 permissions:
